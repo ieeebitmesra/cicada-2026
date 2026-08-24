@@ -1,0 +1,27 @@
+# /etc/audit/rules.d/ctf.rules — exec, privilege escalation, network monitoring.
+#
+# Reload with: augenrules --load
+
+# Monitor all command execution
+-a always,exit -F arch=b64 -S execve -k cmd-exec
+-a always,exit -F arch=b32 -S execve -k cmd-exec
+
+# Monitor privilege escalation
+-a always,exit -F arch=b64 -S setuid -S setgid -k priv-esc
+-a always,exit -F arch=b32 -S setuid -S setgid -k priv-esc
+-w /etc/sudoers -p wa -k sudoers-change
+-w /etc/shadow -p r -k shadow-read
+
+# Monitor network connections
+-a always,exit -F arch=b64 -S connect -S accept -S bind -k network
+
+# Protect audit config
+-w /etc/audit/ -p wa -k audit-config
+-w /etc/nftables.conf -p wa -k firewall-change
+-w /etc/fail2ban/ -p wa -k fail2ban-change
+
+# Watch the CTF databases and host key for tampering
+-w /var/lib/ctf/ -p wa -k ctf-data
+
+# Make rules immutable (requires reboot to change)
+-e 2

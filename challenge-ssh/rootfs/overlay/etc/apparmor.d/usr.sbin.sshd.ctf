@@ -1,0 +1,45 @@
+#include <tunables/global>
+
+profile ctf-sftp /usr/lib/ssh/sftp-server flags=(attach_disconnected) {
+    #include <abstractions/base>
+
+    # Allow SFTP binary
+    /usr/lib/ssh/sftp-server mr,
+
+    # Allow reading challenge files (SFTP-only chroot)
+    /home/seeker/           r,
+    /home/seeker/**         r,
+
+    # System files needed for SFTP
+    /etc/passwd             r,
+    /etc/group              r,
+    /etc/nsswitch.conf      r,
+    /lib/**                 mr,
+    /usr/lib/**             mr,
+
+    # Terminal / misc devices
+    /dev/null               rw,
+    /dev/urandom            r,
+    /dev/log                w,
+
+    # DENY everything dangerous
+    deny /etc/shadow        r,
+    deny /root/**           rwklmx,
+    deny /proc/*/mem        rwklx,
+    deny /sys/**            wklmx,
+    deny /tmp/**            x,
+    deny /dev/shm/**        x,
+
+    # DENY all interpreters and shells
+    deny /usr/bin/python*   x,
+    deny /usr/bin/perl*     x,
+    deny /usr/bin/ruby*     x,
+    deny /bin/busybox      x,
+    deny /bin/bash          x,
+    deny /bin/sh            x,
+    deny /bin/dash          x,
+    deny /bin/ash           x,
+
+    # DENY all networking (SFTP needs no outbound sockets)
+    deny network,
+}

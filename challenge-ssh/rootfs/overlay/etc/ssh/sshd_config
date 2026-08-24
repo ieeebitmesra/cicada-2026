@@ -1,0 +1,35 @@
+# rootfs/overlay/etc/ssh/sshd_config — hardened sshd inside the Firecracker microVM.
+# Players get SFTP-only access to /home/seeker (challenge.zip + track.mid).
+
+Port 22
+ListenAddress 0.0.0.0
+PermitRootLogin no
+PasswordAuthentication yes
+PubkeyAuthentication no
+AllowUsers seeker
+
+# SFTP-only chroot jail
+Subsystem sftp internal-sftp
+
+Match User seeker
+    ChrootDirectory /home/seeker
+    ForceCommand internal-sftp
+    AllowTcpForwarding no
+    X11Forwarding no
+    PermitTunnel no
+    AllowAgentForwarding no
+    AllowStreamLocalForwarding no
+    GatewayPorts no
+    PermitOpen none
+    PermitUserRC no
+
+# Hardening
+Protocol 2
+MaxAuthTries 3
+LoginGraceTime 30
+ClientAliveInterval 120
+ClientAliveCountMax 2
+MaxSessions 2
+MaxStartups 5:50:10
+UseDNS no
+PrintMotd no

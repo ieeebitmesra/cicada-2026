@@ -1,0 +1,39 @@
+# /etc/fail2ban/jail.local — brute-force protection for all three SSH surfaces.
+#
+# Deploy: cp jail.local /etc/fail2ban/jail.local && systemctl restart fail2ban
+# Requires the wish-ssh filter (filter.d/wish-ssh.conf) and wish logs at
+# /var/log/wish-server.log — run the portal with:
+#   ./server 2>>/var/log/wish-server.log   (or journald + rsyslog to that file)
+
+[DEFAULT]
+bantime  = 3600
+findtime = 600
+maxretry = 5
+banaction = nftables-multiport
+
+# Admin SSH
+[sshd]
+enabled  = true
+port     = 22
+maxretry = 3
+bantime  = 7200
+
+# Submission Portal (Wish SSH)
+[wish-portal]
+enabled  = true
+port     = 2222
+filter   = wish-ssh
+logpath  = /var/log/wish-server.log
+maxretry = 5
+bantime  = 3600
+
+# Challenge SSH (Firecracker microVM, DNAT'd from 2223 → guest:22;
+# sshd auth failures surface in the host journal via the VM console or
+# ship them with rsyslog from the guest — see challenge-ssh/README.md)
+[challenge-ssh]
+enabled  = true
+port     = 2223
+filter   = sshd
+logpath  = /var/log/challenge-ssh.log
+maxretry = 5
+bantime  = 1800

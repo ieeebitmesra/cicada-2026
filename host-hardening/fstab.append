@@ -1,0 +1,7 @@
+# /etc/fstab additions — tmpfs mounts with noexec/nodev/nosuid.
+#
+# Append these lines to /etc/fstab, then:
+#   systemctl daemon-reload && mount -a   (or reboot)
+
+tmpfs   /tmp        tmpfs   defaults,noexec,nodev,nosuid,size=1G    0 0
+tmpfs   /dev/shm    tmpfs   defaults,noexec,nodev,nosuid,size=512M  0 0
