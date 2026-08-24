@@ -1,0 +1,56 @@
+# configs/rounds.yaml — Round definitions for the IEEE CTF.
+#
+# flag_hash is the SHA-256 hex digest of the exact flag string (case-sensitive).
+# Generate it with:
+#
+#   ./admin rounds hash-flag --flag 'IEEE{your_secret_flag}'
+#
+# Hints live here (they are NOT stored in the DB); hint *usage* is tracked in the DB.
+#   type: plain   -> costs 20% of the round's points
+#   type: encoded -> costs 10% of the round's points (player must decode it)
+# Hints of a type are dispensed strictly in listed order.
+
+rounds:
+  - id: 1
+    name: "Round 1 — Warmup"
+    points: 100
+    is_active: true
+    flag_hash: "REPLACE_WITH_SHA256_HEX"
+    hints:
+      - type: plain
+        text: "Start by looking at the metadata of the provided file."
+      - type: encoded
+        text: "VGhlIGFuc3dlciBpcyBoaWRkZW4gaW4gcGxhaW4gc2lnaHQu"
+
+  - id: 2
+    name: "Round 2 — Crypto Basics"
+    points: 150
+    is_active: true
+    flag_hash: "REPLACE_WITH_SHA256_HEX"
+    hints:
+      - type: plain
+        text: "The cipher dates back to Rome."
+      - type: encoded
+        text: "PNZFR VF ABG FRphevgl."
+
+  - id: 3
+    name: "Round 3 — Web Recon"
+    points: 200
+    is_active: true
+    flag_hash: "REPLACE_WITH_SHA256_HEX"
+    hints:
+      - type: plain
+        text: "Check the response headers before the page content."
+      - type: encoded
+        text: "5345525645523A206964656E746966792074686520686561646572"
+
+  - id: 4
+    name: "Round 4 — The Seeker's Files"
+    points: 300
+    is_active: true
+    flag_hash: "REPLACE_WITH_SHA256_HEX"
+    hints:
+      - type: plain
+        text: "The numbers are Babylonian; the music is not what it seems."
+      - type: encoded
+        text: "YmFieWxvbiArIG1pZGkgPSBwbGF5IGl0IGJhY2t3YXJkcw=="
