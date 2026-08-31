@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"strings"
 
+	"ieee-ctf/internal/middleware"
 	"ieee-ctf/internal/models"
 )
 
 // CreateTeam inserts a new team with a bcrypt password hash.
 func (db *DB) CreateTeam(name, sshUser, passHash string) (int64, error) {
+	cleanName := middleware.SanitizeInput(middleware.StripANSI(name))
+	cleanUser := strings.ToLower(middleware.SanitizeInput(middleware.StripANSI(sshUser)))
 	res, err := db.Exec(`INSERT INTO teams (name, ssh_user, ssh_pass) VALUES (?, ?, ?)`,
-		name, sshUser, passHash)
+		cleanName, cleanUser, passHash)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return 0, fmt.Errorf("team name or ssh user already exists")
@@ -72,9 +75,19 @@ func (db *DB) UpdatePassword(teamID int64, passHash string) error {
 
 // CompleteRegistration sets the new password hash + PGP pubkey and marks registered.
 func (db *DB) CompleteRegistration(teamID int64, newPassHash, armoredPubkey string) error {
-	_, err := db.Exec(`UPDATE teams SET ssh_pass = ?, pgp_pubkey = ?, registered = 1 WHERE id = ?`,
+	res, err := db.Exec(`
+		UPDATE teams 
+		SET ssh_pass = ?, pgp_pubkey = ?, registered = 1 
+		WHERE id = ? AND registered = 0`,
 		newPassHash, armoredPubkey, teamID)
-	return err
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errors.New("team is already registered or does not exist")
+	}
+	return nil
 }
 
 // DeleteTeam removes a team and its dependent records.

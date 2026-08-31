@@ -29,8 +29,8 @@ func TestSkipCost(t *testing.T) {
 	if got := SkipCost(200); got != 100 {
 		t.Errorf("SkipCost(200) = %v want 100", got)
 	}
-	if got := SkipCost(-40); got != 20 {
-		t.Errorf("SkipCost(-40) = %v want 20 (absolute)", got)
+	if got := SkipCost(100); got != 50 {
+		t.Errorf("SkipCost(100) = %v want 50", got)
 	}
 	if got := SkipCost(0); got != 0 {
 		t.Errorf("SkipCost(0) = %v want 0", got)

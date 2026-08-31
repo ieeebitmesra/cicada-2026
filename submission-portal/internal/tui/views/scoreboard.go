@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
+	"ieee-ctf/internal/middleware"
 	"ieee-ctf/internal/models"
 	"ieee-ctf/internal/store"
 	"ieee-ctf/internal/tui/msg"
@@ -73,7 +74,7 @@ func (m *ScoreboardModel) Refresh() tea.Cmd {
 	if err == nil {
 		rows := make([]table.Row, 0, len(entries))
 		for i, e := range entries {
-			name := e.TeamName
+			name := middleware.SanitizeInput(middleware.StripANSI(e.TeamName))
 			if m.team != nil && e.TeamID == m.team.ID {
 				name = "► " + name
 			}

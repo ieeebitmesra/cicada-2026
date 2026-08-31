@@ -1,6 +1,7 @@
 package views
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -190,7 +191,13 @@ func (m *RequestHintModel) loadRounds() []models.Round {
 func (m *RequestHintModel) issueChallenge() tea.Cmd {
 	challenge, _, cost, err := m.svc.HintChallenge(m.team, m.selected.ID, m.typeSel)
 	if err != nil {
-		text := "Cannot dispense hint: " + err.Error()
+		text := "Cannot dispense hint."
+		switch {
+		case errors.Is(err, scoring.ErrNoHintsLeft):
+			text = "No hints of that type remain for this round."
+		case errors.Is(err, scoring.ErrRoundInactive):
+			text = "Round is not active."
+		}
 		return func() tea.Msg { return msg.StatusFlash{Text: text, Success: false} }
 	}
 	m.challenge = challenge
@@ -205,8 +212,19 @@ func (m *RequestHintModel) redeem() tea.Cmd {
 	body, cost, err := m.svc.RedeemHint(m.team, m.selected.ID, m.typeSel, m.paste.Value())
 	if err != nil {
 		text := "Verification failed. Hint not dispensed."
-		if err != scoring.ErrNoHintsLeft {
-			text += " (" + err.Error() + ")"
+		switch {
+		case errors.Is(err, scoring.ErrNoHintsLeft):
+			text = "No hints of that type remain for this round."
+		case errors.Is(err, scoring.ErrBadChallenge):
+			text = "Signed challenge does not match the issued request."
+		case errors.Is(err, scoring.ErrChallengeStale):
+			text = "Signed challenge has expired. Please request a fresh challenge."
+		case errors.Is(err, auth.ErrBadSignature):
+			text = "PGP signature verification failed."
+		case errors.Is(err, auth.ErrNoSignature):
+			text = "No valid PGP signature found in input."
+		case errors.Is(err, scoring.ErrRoundInactive):
+			text = "Round is not active."
 		}
 		flashErr := func() tea.Msg { return msg.StatusFlash{Text: text, Success: false} }
 		return flashErr

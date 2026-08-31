@@ -4,12 +4,23 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"net"
 	"strings"
+	"sync"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/time/rate"
 
 	"ieee-ctf/internal/models"
 	"ieee-ctf/internal/store"
+)
+
+var (
+	authLimiterMu sync.Mutex
+	authLimiters  = make(map[string]*rate.Limiter)
+	failedLogins  = make(map[string]int)
+	lockoutUntil  = make(map[string]time.Time)
 )
 
 const bcryptCost = 10
@@ -28,14 +39,65 @@ func HashPassword(plain string) (string, error) {
 
 // VerifyTeamLogin checks an SSH username/password pair against the teams table.
 func VerifyTeamLogin(db *store.DB, user, password string) bool {
+	return VerifyTeamLoginWithIP(db, user, password, "127.0.0.1")
+}
+
+// VerifyTeamLoginWithIP checks SSH login with per-IP rate limiting and failure lockout.
+func VerifyTeamLoginWithIP(db *store.DB, user, password, remoteAddr string) bool {
 	if user == "" || password == "" {
 		return false
 	}
-	team, err := db.GetTeamBySSHUser(strings.ToLower(user))
-	if err != nil || team == nil {
+	ip, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		ip = remoteAddr
+	}
+
+	authLimiterMu.Lock()
+	if until, locked := lockoutUntil[ip]; locked && time.Now().Before(until) {
+		authLimiterMu.Unlock()
 		return false
 	}
-	return bcrypt.CompareHashAndPassword([]byte(team.SSHPass), []byte(password)) == nil
+	lim, exists := authLimiters[ip]
+	if !exists {
+		lim = rate.NewLimiter(rate.Limit(2.0), 5) // max 2 auth/sec, burst 5
+		authLimiters[ip] = lim
+	}
+	if !lim.Allow() {
+		authLimiterMu.Unlock()
+		return false
+	}
+	authLimiterMu.Unlock()
+
+	team, err := db.GetTeamBySSHUser(strings.ToLower(user))
+	if err != nil || team == nil {
+		recordAuthFailure(ip)
+		return false
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(team.SSHPass), []byte(password)); err != nil {
+		recordAuthFailure(ip)
+		return false
+	}
+
+	recordAuthSuccess(ip)
+	return true
+}
+
+func recordAuthFailure(ip string) {
+	authLimiterMu.Lock()
+	defer authLimiterMu.Unlock()
+	failedLogins[ip]++
+	if failedLogins[ip] >= 10 {
+		lockoutUntil[ip] = time.Now().Add(5 * time.Minute)
+		failedLogins[ip] = 0
+	}
+}
+
+func recordAuthSuccess(ip string) {
+	authLimiterMu.Lock()
+	defer authLimiterMu.Unlock()
+	delete(failedLogins, ip)
+	delete(lockoutUntil, ip)
 }
 
 var ErrWeakPassword = errors.New("password must be at least 8 characters")

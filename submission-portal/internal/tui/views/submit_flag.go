@@ -1,6 +1,7 @@
 package views
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -170,14 +171,22 @@ func (m *SubmitFlagModel) submit() tea.Cmd {
 	raw := m.input.Value()
 	res, err := m.svc.SubmitFlag(m.team, m.selected.ID, raw)
 	if err != nil {
-		text := err.Error()
-		switch err {
-		case scoring.ErrRateLimited:
+		text := "Submission failed."
+		switch {
+		case errors.Is(err, scoring.ErrRateLimited):
 			text = "Too many submissions — slow down."
-		case store.ErrAlreadySolved:
+		case errors.Is(err, store.ErrAlreadySolved):
 			text = "Already solved this round!"
-		case scoring.ErrFlagFormat:
+		case errors.Is(err, scoring.ErrAlreadySkipped):
+			text = "Round was already skipped."
+		case errors.Is(err, scoring.ErrRoundInactive):
+			text = "Round is not active."
+		case errors.Is(err, scoring.ErrFlagFormat):
 			text = "Invalid format. Flags look like IEEE{...}"
+		case errors.Is(err, scoring.ErrFlagTooLong):
+			text = "Flag is too long."
+		case strings.Contains(err.Error(), "cooldown"):
+			text = err.Error()
 		}
 		flashErr := func() tea.Msg { return msg.StatusFlash{Text: text, Success: false} }
 		return flashErr

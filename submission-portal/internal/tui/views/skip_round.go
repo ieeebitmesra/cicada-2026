@@ -108,9 +108,9 @@ func (m SkipRoundModel) Update(msg_ tea.Msg) (SkipRoundModel, tea.Cmd) {
 					continue
 				}
 				m.pending = r
-				cost, err := m.svc.PreviewSkipCost(m.team.ID)
+				cost, err := m.svc.PreviewSkipCost(m.team.ID, r.ID)
 				if err != nil {
-					flashErr := func() tea.Msg { return msg.StatusFlash{Text: "Preview failed: " + err.Error(), Success: false} }
+					flashErr := func() tea.Msg { return msg.StatusFlash{Text: "Cannot preview skip cost at this time.", Success: false} }
 					return m, flashErr
 				}
 				b, _ := m.svc.Breakdown(m.team.ID)
@@ -146,7 +146,16 @@ func (m *SkipRoundModel) loadRounds() []models.Round {
 func (m *SkipRoundModel) doSkip() tea.Cmd {
 	cost, err := m.svc.SkipRound(m.team, m.pending.ID)
 	if err != nil {
-		flashErr := func() tea.Msg { return msg.StatusFlash{Text: "Skip failed: " + err.Error(), Success: false} }
+		text := "Skip failed."
+		switch err {
+		case scoring.ErrRoundInactive:
+			text = "Round is no longer active."
+		case scoring.ErrAlreadySkipped:
+			text = "Round was already skipped."
+		case scoring.ErrSolvedNoSkip:
+			text = "Round is already solved — cannot skip."
+		}
+		flashErr := func() tea.Msg { return msg.StatusFlash{Text: text, Success: false} }
 		return flashErr
 	}
 	flashOK := func() tea.Msg {
@@ -162,7 +171,7 @@ func (m SkipRoundModel) View() string {
 	b.WriteString(lipgloss.NewStyle().Bold(true).Render("Skip Round") + "\n\n")
 	if m.confirm.Active() {
 		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#FFB300")).
-			Render("⚠ Skipping costs 50% of your CURRENT total — choose carefully.") + "\n\n")
+			Render("⚠ Skipping costs 50% of this challenge's point value — choose carefully.") + "\n\n")
 		b.WriteString(m.confirm.View())
 	} else if len(m.list.Items()) == 0 {
 		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280")).
