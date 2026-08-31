@@ -17,13 +17,6 @@ challenge-ssh/rootfs/*.ext4
 challenge-ssh/rootfs/overlay/home/seeker/challenge.zip
 challenge-ssh/rootfs/overlay/home/seeker/track.mid
 
-# Go build artifacts
-*.exe
-admin
-server
-orchestrator
-dist/
-
 # Backups
 backup.sql
 scores.csv
