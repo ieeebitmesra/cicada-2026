@@ -1,6 +1,7 @@
 package scoring
 
 import (
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"strings"
@@ -13,17 +14,17 @@ import (
 
 // ErrRoundInactive / ErrNotRegistered are game-flow guards.
 var (
-	ErrRoundInactive = errors.New("round is not active")
+	ErrRoundInactive  = errors.New("round is not active")
 	ErrAlreadySkipped = errors.New("round already skipped")
 	ErrSolvedNoSkip   = errors.New("round already solved — nothing to skip")
 )
 
 // Service wires the store, rounds config and validators into game operations.
 type Service struct {
-	DB            *store.DB
-	Rounds        *models.RoundsConfig
-	Flags         *FlagValidator
-	HintValidity  time.Duration
+	DB           *store.DB
+	Rounds       *models.RoundsConfig
+	Flags        *FlagValidator
+	HintValidity time.Duration
 }
 
 // NewService constructs the game service.
@@ -33,7 +34,7 @@ func NewService(db *store.DB, rounds *models.RoundsConfig, flags *FlagValidator,
 
 // SubmitResult describes the outcome of a flag submission.
 type SubmitResult struct {
-	Correct     bool
+	Correct       bool
 	PointsAwarded float64
 }
 
@@ -61,7 +62,20 @@ func (s *Service) SubmitFlag(team *models.Team, roundID int, raw string) (*Submi
 		return nil, store.ErrAlreadySolved
 	}
 
-	correct := HashFlag(flag) == strings.ToLower(round.FlagHash)
+	// FIX SEC-01: Check if round was skipped
+	skipped, err := s.DB.HasSkipped(team.ID, roundID)
+	if err != nil {
+		return nil, err
+	}
+	if skipped {
+		return nil, ErrAlreadySkipped
+	}
+
+	// FIX SEC-11: Constant-time hash comparison
+	expectedHash := strings.ToLower(round.FlagHash)
+	actualHash := HashFlag(flag)
+	correct := subtle.ConstantTimeCompare([]byte(actualHash), []byte(expectedHash)) == 1
+
 	if _, err := s.DB.RecordSubmission(team.ID, roundID, flag, correct); err != nil {
 		return nil, err
 	}
@@ -88,6 +102,12 @@ func (s *Service) NextHintIndex(teamID int64, roundID int, hintType string) (int
 
 // HintChallenge issues a challenge for the next available hint of a type.
 func (s *Service) HintChallenge(team *models.Team, roundID int, hintType string) (challenge string, index int, cost float64, err error) {
+	// FIX SEC-13: Validate round is active in database
+	dbRound, err := s.DB.GetRound(roundID)
+	if err != nil || !dbRound.IsActive {
+		return "", 0, 0, ErrRoundInactive
+	}
+
 	index, err = s.NextHintIndex(team.ID, roundID, hintType)
 	if err != nil {
 		return "", 0, 0, err
@@ -96,7 +116,10 @@ func (s *Service) HintChallenge(team *models.Team, roundID int, hintType string)
 	if round == nil {
 		return "", 0, 0, ErrRoundInactive
 	}
-	challenge = BuildHintChallenge(team, roundID, hintType, index, time.Now())
+
+	// FIX SEC-09: Add cryptographic nonce
+	nonce := auth.RandomChallengeToken()
+	challenge = BuildHintChallenge(team, roundID, hintType, index, nonce, time.Now())
 	return challenge, index, HintCost(round.Points, hintType), nil
 }
 
@@ -105,6 +128,13 @@ func (s *Service) RedeemHint(team *models.Team, roundID int, hintType string, si
 	if len(signed) > 8192 {
 		return "", 0, errors.New("PGP message too long")
 	}
+
+	// FIX SEC-13: Validate round is active in database
+	dbRound, err := s.DB.GetRound(roundID)
+	if err != nil || !dbRound.IsActive {
+		return "", 0, ErrRoundInactive
+	}
+
 	index, err := s.NextHintIndex(team.ID, roundID, hintType)
 	if err != nil {
 		return "", 0, err
@@ -132,12 +162,12 @@ func (s *Service) RedeemHint(team *models.Team, roundID int, hintType string, si
 }
 
 // PreviewSkipCost computes what skipping a round would cost right now.
-func (s *Service) PreviewSkipCost(teamID int64) (float64, error) {
-	b, err := s.Breakdown(teamID)
-	if err != nil {
-		return 0, err
+func (s *Service) PreviewSkipCost(teamID int64, roundID int) (float64, error) {
+	round := s.Rounds.Def(roundID)
+	if round == nil {
+		return 0, ErrRoundInactive
 	}
-	return SkipCost(b.Total), nil
+	return SkipCost(round.Points), nil
 }
 
 // SkipRound applies the skip penalty and records it.
@@ -146,6 +176,12 @@ func (s *Service) SkipRound(team *models.Team, roundID int) (cost float64, err e
 	if round == nil {
 		return 0, ErrRoundInactive
 	}
+	// FIX SEC-13: Validate round is active in database
+	dbRound, err := s.DB.GetRound(roundID)
+	if err != nil || !dbRound.IsActive {
+		return 0, ErrRoundInactive
+	}
+
 	solved, err := s.DB.HasSolvedRound(team.ID, roundID)
 	if err != nil {
 		return 0, err
@@ -161,11 +197,8 @@ func (s *Service) SkipRound(team *models.Team, roundID int) (cost float64, err e
 		return 0, ErrAlreadySkipped
 	}
 
-	b, err := s.Breakdown(team.ID)
-	if err != nil {
-		return 0, err
-	}
-	cost = SkipCost(b.Total)
+	// FIX SEC-02 & SEC-07: Fixed cost based on challenge points
+	cost = SkipCost(round.Points)
 	if _, err := s.DB.RecordSkip(team.ID, roundID, cost); err != nil {
 		return 0, err
 	}
@@ -174,13 +207,13 @@ func (s *Service) SkipRound(team *models.Team, roundID int) (cost float64, err e
 
 // Breakdown is a team's full score decomposition.
 type Breakdown struct {
-	Earned      float64
-	HintCosts   float64
-	SkipCosts   float64
-	Total       float64
+	Earned       float64
+	HintCosts    float64
+	SkipCosts    float64
+	Total        float64
 	SolvedRounds []int
-	Hints       []models.HintUsage
-	Skips       []models.Skip
+	Hints        []models.HintUsage
+	Skips        []models.Skip
 }
 
 // Breakdown fetches all components of a team's score.
@@ -189,7 +222,8 @@ func (s *Service) Breakdown(teamID int64) (*Breakdown, error) {
 	if err != nil {
 		return nil, err
 	}
-	subs, err := s.DB.TeamSubmissions(teamID, 10000)
+	// FIX SEC-03: Use SolvedSubmissions to prevent score truncation on 10k+ attempts
+	solvedSubs, err := s.DB.SolvedSubmissions(teamID)
 	if err != nil {
 		return nil, err
 	}
@@ -206,17 +240,15 @@ func (s *Service) Breakdown(teamID int64) (*Breakdown, error) {
 		return nil, err
 	}
 
-	total := CalculateTeamScore(subs, rounds, hints, skips)
+	total := CalculateTeamScore(solvedSubs, rounds, hints, skips)
 	b := &Breakdown{
 		Total:        total,
 		SolvedRounds: solvedIDs,
 		Hints:        hints,
 		Skips:        skips,
 	}
-	for _, sub := range subs {
-		if sub.IsCorrect {
-			b.Earned += float64(rounds[sub.RoundID].Points)
-		}
+	for _, sub := range solvedSubs {
+		b.Earned += float64(rounds[sub.RoundID].Points)
 	}
 	for _, h := range hints {
 		b.HintCosts += h.CostPoints

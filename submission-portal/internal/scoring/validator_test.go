@@ -57,10 +57,10 @@ func TestChallengeParseAndVerify(t *testing.T) {
 	team := &models.Team{SSHUser: "alpha"}
 
 	now := time.Now().UTC()
-	ch := BuildHintChallenge(team, 3, "plain", 0, now)
+	ch := BuildHintChallenge(team, 3, "plain", 0, "nonce123", now)
 	fields := ParseChallenge(ch)
 	if fields["round"] != "3" || fields["type"] != "plain" ||
-		fields["index"] != "0" || fields["team"] != "alpha" || fields["ts"] == "" {
+		fields["index"] != "0" || fields["nonce"] != "nonce123" || fields["team"] != "alpha" || fields["ts"] == "" {
 		t.Fatalf("challenge parse failed: %#v", fields)
 	}
 
@@ -80,7 +80,7 @@ func TestChallengeParseAndVerify(t *testing.T) {
 	}
 
 	// Stale challenge rejected.
-	old := BuildHintChallenge(team, 3, "plain", 0, now.Add(-11*time.Minute))
+	old := BuildHintChallenge(team, 3, "plain", 0, "nonce123", now.Add(-11*time.Minute))
 	if err := VerifyHintChallenge(old, team, 3, "plain", 0, 10*time.Minute); err != ErrChallengeStale {
 		t.Errorf("stale challenge accepted: %v", err)
 	}

@@ -28,3 +28,4 @@ dist/
 backup.sql
 scores.csv
 teams.csv
+.agents/

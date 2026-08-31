@@ -29,9 +29,9 @@ var (
 )
 
 // BuildHintChallenge creates the string the player must clearsign.
-func BuildHintChallenge(team *models.Team, roundID int, hintType string, hintIndex int, now time.Time) string {
-	return fmt.Sprintf("HINT-REQ\nround=%d\ntype=%s\nindex=%d\nts=%s\nteam=%s",
-		roundID, hintType, hintIndex, now.UTC().Format(time.RFC3339), team.SSHUser)
+func BuildHintChallenge(team *models.Team, roundID int, hintType string, hintIndex int, nonce string, now time.Time) string {
+	return fmt.Sprintf("HINT-REQ\nround=%d\ntype=%s\nindex=%d\nnonce=%s\nts=%s\nteam=%s",
+		roundID, hintType, hintIndex, nonce, now.UTC().Format(time.RFC3339), team.SSHUser)
 }
 
 // VerifyHintChallenge validates a signed challenge body against expectations.
@@ -49,6 +49,9 @@ func VerifyHintChallenge(body string, team *models.Team, roundID int, hintType s
 	if fields["round"] != strconv.Itoa(roundID) ||
 		fields["type"] != hintType ||
 		fields["index"] != strconv.Itoa(hintIndex) {
+		return ErrBadChallenge
+	}
+	if fields["nonce"] == "" {
 		return ErrBadChallenge
 	}
 	ts, err := time.Parse(time.RFC3339, fields["ts"])
@@ -78,7 +81,7 @@ func ParseChallenge(body string) map[string]string {
 		}
 		out[strings.TrimSpace(k)] = strings.TrimSpace(v)
 	}
-	if len(out) < 4 { // round, type, index, ts, team — marker excluded
+	if len(out) < 5 { // round, type, index, nonce, ts, team — marker excluded
 		return nil
 	}
 	return out

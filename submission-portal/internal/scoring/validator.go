@@ -71,6 +71,15 @@ func (v *FlagValidator) Check(teamID int64, raw string) (string, error) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
+	// Check cooldown FIRST before consuming bucket token
+	if last, ok := v.lastAttempt[teamID]; ok {
+		if elapsed := time.Since(last); elapsed < v.cooldown {
+			return "", fmt.Errorf("%w (%ds remaining)",
+				ErrCooldownActive, int((v.cooldown-elapsed).Seconds()+0.99))
+		}
+	}
+
+	// Consume rate limit token ONLY after cooldown is satisfied
 	lim := v.limiters[teamID]
 	if lim == nil {
 		lim = rate.NewLimiter(v.perMinute, v.burst)
@@ -79,12 +88,7 @@ func (v *FlagValidator) Check(teamID int64, raw string) (string, error) {
 	if !lim.Allow() {
 		return "", ErrRateLimited
 	}
-	if last, ok := v.lastAttempt[teamID]; ok {
-		if elapsed := time.Since(last); elapsed < v.cooldown {
-			return "", fmt.Errorf("%w (%ds remaining)",
-				ErrCooldownActive, int((v.cooldown - elapsed).Seconds()+0.99))
-		}
-	}
+
 	v.lastAttempt[teamID] = time.Now()
 	return flag, nil
 }

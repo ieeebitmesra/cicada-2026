@@ -70,6 +70,28 @@ func (db *DB) SolvedRoundIDs(teamID int64) ([]int, error) {
 	return out, rows.Err()
 }
 
+// SolvedSubmissions returns ALL correct submissions for a team without truncation.
+func (db *DB) SolvedSubmissions(teamID int64) ([]models.Submission, error) {
+	rows, err := db.Query(`
+		SELECT id, team_id, round_id, flag_input, is_correct, submitted_at
+		FROM submissions WHERE team_id = ? AND is_correct = 1 ORDER BY round_id`,
+		teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []models.Submission
+	for rows.Next() {
+		s, err := scanSubmission(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *s)
+	}
+	return out, rows.Err()
+}
+
 // TeamSubmissions returns recent submissions for a team (newest first), capped.
 func (db *DB) TeamSubmissions(teamID int64, limit int) ([]models.Submission, error) {
 	rows, err := db.Query(`

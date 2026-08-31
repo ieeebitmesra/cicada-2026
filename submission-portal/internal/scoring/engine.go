@@ -39,10 +39,8 @@ func HintCost(roundPoints int, hintType string) float64 {
 	return 0
 }
 
-// SkipCost = 50% of the team's current total (absolute value).
-func SkipCost(currentTotal float64) float64 {
-	if currentTotal >= 0 {
-		return currentTotal * 0.50
-	}
-	return -currentTotal * 0.50
+// SkipCost calculates penalty based on Round Points (50% of the challenge value).
+// Basing on round value guarantees non-zero penalty.
+func SkipCost(roundPoints int) float64 {
+	return float64(roundPoints) * 0.50
 }

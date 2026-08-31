@@ -147,7 +147,7 @@ func (db *DB) TeamSkips(teamID int64) ([]models.Skip, error) {
 // Scoreboard reads the leaderboard view ordered by score desc.
 func (db *DB) Scoreboard() ([]models.ScoreboardEntry, error) {
 	rows, err := db.Query(
-		`SELECT team_id, team_name, total_score, rounds_solved FROM scoreboard ORDER BY total_score DESC, team_name ASC`)
+		`SELECT team_id, team_name, total_score, rounds_solved FROM scoreboard ORDER BY total_score DESC, last_solve_at ASC, team_name ASC`)
 	if err != nil {
 		return nil, err
 	}
