@@ -102,16 +102,14 @@ func recordAuthSuccess(ip string) {
 
 var ErrWeakPassword = errors.New("password must be at least 8 characters")
 
-// CompleteRegistration sets the team's new password + PGP key and marks it registered.
-func CompleteRegistration(db *store.DB, team *models.Team, newPassword, armoredPubkey string) error {
+// CompleteRegistration sets the team's new password and marks it registered.
+// PGP key is no longer required for registration.
+func CompleteRegistration(db *store.DB, team *models.Team, newPassword string) error {
 	hash, err := HashPassword(newPassword)
 	if err != nil {
 		return ErrWeakPassword
 	}
-	if _, err := ParsePublicKey(armoredPubkey); err != nil {
-		return fmt.Errorf("invalid PGP public key: %w", err)
-	}
-	return db.CompleteRegistration(team.ID, hash, strings.TrimSpace(armoredPubkey))
+	return db.CompleteRegistration(team.ID, hash, "")
 }
 
 // ResetPassword generates and sets a new random password, returning the plaintext.
