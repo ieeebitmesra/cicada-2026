@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -21,7 +21,7 @@ type skipPhase int
 
 const (
 	skipPhaseSelect skipPhase = iota
-	skipPhaseSign
+	skipPhaseConfirm
 	skipPhaseDone
 )
 
@@ -86,24 +86,23 @@ func (d skipDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	fmt.Fprintf(w, "%s\n%s", row1, row2)
 }
 
-// SkipRoundModel executes a round skip with cryptographic PGP signature verification.
+// SkipRoundModel executes a round skip with password confirmation.
 type SkipRoundModel struct {
 	width, height int
 	phase         skipPhase
 
-	list      list.Model
-	paste     textarea.Model
-	confirm   components.Confirm
-	selected  models.Round
-	challenge string
-	cost      float64
-	total     float64
+	list     list.Model
+	passInp  textinput.Model
+	confirm  components.Confirm
+	selected models.Round
+	cost     float64
+	total    float64
 
 	svc  *scoring.Service
 	team *models.Team
 }
 
-// NewSkipRound builds the skip view with PGP signing support.
+// NewSkipRound builds the skip view with password confirmation.
 func NewSkipRound(svc *scoring.Service, team *models.Team) SkipRoundModel {
 	l := list.New([]list.Item{}, skipDelegate{width: 54}, 0, 0)
 	l.Title = "SELECT CHALLENGE TO STRATEGICALLY BYPASS"
@@ -116,15 +115,19 @@ func NewSkipRound(svc *scoring.Service, team *models.Team) SkipRoundModel {
 		Background(lipgloss.Color("#FFB800")).
 		Padding(0, 1)
 
-	paste := textarea.New()
-	paste.Placeholder = "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n...\n-----BEGIN PGP SIGNATURE-----\n...\n-----END PGP SIGNATURE-----"
-	paste.CharLimit = 8192
-	paste.ShowLineNumbers = false
+	passInp := textinput.New()
+	passInp.Placeholder = "Enter your team password to confirm"
+	passInp.EchoMode = textinput.EchoPassword
+	passInp.CharLimit = 128
+	passInp.Width = 44
+	passInp.Prompt = "❯ "
+	passInp.PromptStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF3860"))
+	passInp.TextStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F8FAFC"))
 
 	return SkipRoundModel{
 		phase:   skipPhaseSelect,
 		list:    l,
-		paste:   paste,
+		passInp: passInp,
 		confirm: components.NewConfirm(1, "Skip this round?", nil),
 		svc:     svc,
 		team:    team,
@@ -153,20 +156,20 @@ func (m *SkipRoundModel) SetSize(w, h int) {
 	m.list.SetSize(listW, listH)
 	m.confirm.SetSize(w, h)
 
-	if w > 10 {
-		m.paste.SetWidth(w - 12)
+	inputWidth := 50
+	if w > 16 {
+		inputWidth = w - 16
+		if inputWidth > 64 {
+			inputWidth = 64
+		}
 	}
-	pH := h / 3
-	if pH < 5 {
-		pH = 5
-	}
-	m.paste.SetHeight(pH)
+	m.passInp.Width = inputWidth
 }
 
 // Refresh reloads skippable rounds.
 func (m *SkipRoundModel) Refresh() tea.Cmd {
 	m.phase = skipPhaseSelect
-	m.paste.Reset()
+	m.passInp.SetValue("")
 
 	rounds, err := m.svc.DB.ListRounds(true)
 	if err != nil {
@@ -193,7 +196,7 @@ func (m *SkipRoundModel) Refresh() tea.Cmd {
 	return cmd
 }
 
-// Update handles user input, phase transitions, and PGP submission.
+// Update handles user input, phase transitions, and password submission.
 func (m SkipRoundModel) Update(msg_ tea.Msg) (SkipRoundModel, tea.Cmd) {
 	if key, ok := msg_.(tea.KeyMsg); ok {
 		switch key.String() {
@@ -201,9 +204,10 @@ func (m SkipRoundModel) Update(msg_ tea.Msg) (SkipRoundModel, tea.Cmd) {
 			return m, tea.Quit
 		case "esc":
 			switch m.phase {
-			case skipPhaseSign:
+			case skipPhaseConfirm:
 				m.phase = skipPhaseSelect
-				m.paste.Reset()
+				m.passInp.SetValue("")
+				m.passInp.Blur()
 				return m, nil
 			case skipPhaseDone:
 				m.phase = skipPhaseSelect
@@ -223,32 +227,13 @@ func (m SkipRoundModel) Update(msg_ tea.Msg) (SkipRoundModel, tea.Cmd) {
 						continue
 					}
 					m.selected = r
-					if m.team.PGPPubkey == "" {
-						flashErr := func() tea.Msg {
-							return msg.StatusFlash{
-								Text:    "PGP key unlinked. Register a public key to authorize skips.",
-								Success: false,
-							}
-						}
-						return m, flashErr
-					}
-
-					challenge, cost, err := m.svc.SkipChallenge(m.team, r.ID)
-					if err != nil {
-						flashErr := func() tea.Msg {
-							return msg.StatusFlash{Text: "Cannot initiate bypass: " + err.Error(), Success: false}
-						}
-						return m, flashErr
-					}
-
+					m.cost = scoring.SkipCost(r.Points)
 					b, _ := m.svc.Breakdown(m.team.ID)
-					m.challenge = challenge
-					m.cost = cost
 					m.total = b.Total
-					m.phase = skipPhaseSign
-					m.paste.Reset()
-					m.paste.Focus()
-					return m, textarea.Blink
+					m.phase = skipPhaseConfirm
+					m.passInp.SetValue("")
+					m.passInp.Focus()
+					return m, textinput.Blink
 				}
 			}
 		}
@@ -256,28 +241,30 @@ func (m SkipRoundModel) Update(msg_ tea.Msg) (SkipRoundModel, tea.Cmd) {
 		m.list, cmd = m.list.Update(msg_)
 		return m, cmd
 
-	case skipPhaseSign:
-		if key, ok := msg_.(tea.KeyMsg); ok && key.String() == "ctrl+s" {
-			signed := strings.TrimSpace(m.paste.Value())
-			if signed == "" {
+	case skipPhaseConfirm:
+		if key, ok := msg_.(tea.KeyMsg); ok && (key.String() == "enter" || key.String() == "ctrl+s") {
+			password := m.passInp.Value()
+			if password == "" {
 				flashErr := func() tea.Msg {
-					return msg.StatusFlash{Text: "Paste your PGP clearsigned message before verifying.", Success: false}
+					return msg.StatusFlash{Text: "Enter your team password to confirm the bypass.", Success: false}
 				}
 				return m, flashErr
 			}
 
-			cost, err := m.svc.ExecuteSkip(m.team, m.selected.ID, signed)
+			// Verify password against stored hash
+			if !auth.VerifyTeamLogin(m.svc.DB, m.team.SSHUser, password) {
+				flashErr := func() tea.Msg {
+					return msg.StatusFlash{Text: "Incorrect password. Bypass denied.", Success: false}
+				}
+				m.passInp.SetValue("")
+				return m, flashErr
+			}
+
+			// Password verified — execute the skip directly
+			cost, err := m.svc.SkipRound(m.team, m.selected.ID)
 			if err != nil {
-				text := "PGP signature verification failed."
+				text := "Cannot execute bypass: " + err.Error()
 				switch err {
-				case auth.ErrNoSignature:
-					text = "No valid PGP signature block found in text."
-				case auth.ErrBadSignature:
-					text = "PGP signature is INVALID for registered team key."
-				case scoring.ErrBadChallenge:
-					text = "Signed challenge content does not match the issued nonce."
-				case scoring.ErrChallengeStale:
-					text = "Challenge timestamp expired (>15 min). Request a fresh nonce."
 				case scoring.ErrRoundInactive:
 					text = "Challenge round is no longer active."
 				case scoring.ErrAlreadySkipped:
@@ -301,7 +288,7 @@ func (m SkipRoundModel) Update(msg_ tea.Msg) (SkipRoundModel, tea.Cmd) {
 		}
 
 		var cmd tea.Cmd
-		m.paste, cmd = m.paste.Update(msg_)
+		m.passInp, cmd = m.passInp.Update(msg_)
 		return m, cmd
 
 	case skipPhaseDone:
@@ -327,7 +314,7 @@ func (m SkipRoundModel) renderWizardBar() string {
 		label string
 	}{
 		{skipPhaseSelect, "1. SELECT TARGET"},
-		{skipPhaseSign, "2. PGP CLEARSIGN VERIFICATION"},
+		{skipPhaseConfirm, "2. PASSWORD CONFIRMATION"},
 		{skipPhaseDone, "3. BYPASS CONFIRMED"},
 	}
 
@@ -393,152 +380,53 @@ func (m SkipRoundModel) View() string {
 			}
 		}
 
-	case skipPhaseSign:
-		var b strings.Builder
-		keyID := auth.PublicKeyID(m.team.PGPPubkey)
-		gpgCmd := "gpg --clearsign"
-		if keyID != "" {
-			gpgCmd = fmt.Sprintf("gpg --clearsign -u %s", keyID)
-		}
+	case skipPhaseConfirm:
+		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#FF3860")).Padding(0, 1).Render(" ⚠️  CONFIRM ROUND BYPASS ")
 
-		availW := w - 8
+		targetInfo := fmt.Sprintf("\nTarget   : Round %d — %s\nPenalty  : −%s PTS (50%% of challenge value)\nStatus   : IRREVERSIBLE FORFEITURE\n",
+			m.selected.ID, m.selected.Name, formatPoints(m.cost))
 
-		nonceHeader := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
-			Background(lipgloss.Color("#FFB800")).Padding(0, 1).Render("STEP 1: FORFEITURE NONCE CHALLENGE")
+		targetStyled := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#F0F6FC")).
+			Render(targetInfo)
 
-		inputHeader := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
-			Background(lipgloss.Color("#00F0FF")).Padding(0, 1).Render("STEP 2: PASTE PGP CLEARSIGNATURE")
+		warning := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#FF3860")).
+			Render("⚠️  This action is PERMANENT. Enter your team password to confirm:")
 
-		if w >= 90 {
-			paneW := (availW - 2) / 2
-			if paneW < 38 {
-				paneW = 38
-			}
-			m.paste.SetWidth(paneW - 4)
-			m.paste.SetHeight(10)
+		inputCard := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#FF3860")).
+			Background(lipgloss.Color("#0D1117")).
+			Padding(1, 2).
+			Render(m.passInp.View())
 
-			tokenBox := lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("#30363D")).
-				Background(lipgloss.Color("#0D1117")).
-				Foreground(lipgloss.Color("#FF3860")).
-				Bold(true).
-				Padding(0, 1).
-				Width(paneW - 6).
-				Render(m.challenge)
+		btnHelp := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#00FF9D")).
+			Render("[Enter] Verify & Forfeit Round  ") +
+			lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).Render("•  [Esc] Cancel & Return")
 
-			cmdBox := lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("#30363D")).
-				Background(lipgloss.Color("#0D1117")).
-				Foreground(lipgloss.Color("#00F0FF")).
-				Bold(true).
-				Padding(0, 1).
-				Width(paneW - 6).
-				Render(fmt.Sprintf("$ %s", gpgCmd))
+		box := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#30363D")).
+			Background(lipgloss.Color("#161B22")).
+			Padding(1, 3).
+			Width(w - 6).
+			Render(lipgloss.JoinVertical(lipgloss.Left,
+				header,
+				targetStyled,
+				warning,
+				"",
+				inputCard,
+				"",
+				btnHelp,
+			))
 
-			eofGuide := lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#C9D1D9")).
-				Render("• Paste token into stdin, then send EOF:\n  Linux/macOS: [Ctrl+D]\n  Windows:     [Ctrl+Z] then [Enter]")
-
-			fileTip := lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#8B949E")).
-				Render(fmt.Sprintf("• Or save to skip.txt and run:\n  $ %s skip.txt", gpgCmd))
-
-			nonceContent := lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("#FFB800")).
-				Background(lipgloss.Color("#161B22")).
-				Padding(1, 2).
-				Width(paneW).
-				Render(lipgloss.JoinVertical(lipgloss.Left,
-					nonceHeader,
-					"",
-					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF3860")).
-						Render(fmt.Sprintf("Target: Round %d — %s (−%s PTS)", m.selected.ID, m.selected.Name, formatPoints(m.cost))),
-					"",
-					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#58A6FF")).Render("1. Forfeiture Challenge Nonce:"),
-					tokenBox,
-					"",
-					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#58A6FF")).Render("2. Run in terminal:"),
-					cmdBox,
-					"",
-					eofGuide,
-					"",
-					fileTip,
-				))
-
-			inputCard := lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("#00F0FF")).
-				Background(lipgloss.Color("#161B22")).
-				Padding(1, 2).
-				Width(paneW).
-				Render(lipgloss.JoinVertical(lipgloss.Left,
-					inputHeader,
-					"",
-					m.paste.View(),
-					"",
-					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF3860")).Render("⚠️ Irreversible −50% Forfeiture Deduction"),
-					"",
-					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF9D")).Render("[Ctrl+S] Verify Signature & Forfeit Round"),
-					lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).Render("[Esc] Cancel & Return"),
-				))
-
-			b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, nonceContent, "  ", inputCard))
-		} else {
-			m.paste.SetWidth(availW - 4)
-			m.paste.SetHeight(5)
-
-			tokenBox := lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("#30363D")).
-				Background(lipgloss.Color("#0D1117")).
-				Foreground(lipgloss.Color("#FF3860")).
-				Bold(true).
-				Padding(0, 1).
-				Render(m.challenge)
-
-			cmdBox := lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("#30363D")).
-				Background(lipgloss.Color("#0D1117")).
-				Foreground(lipgloss.Color("#00F0FF")).
-				Bold(true).
-				Padding(0, 1).
-				Render(fmt.Sprintf("$ %s", gpgCmd))
-
-			nonceContent := lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("#FFB800")).
-				Background(lipgloss.Color("#161B22")).
-				Padding(1, 2).
-				Width(availW).
-				Render(lipgloss.JoinVertical(lipgloss.Left,
-					nonceHeader,
-					"",
-					tokenBox,
-					cmdBox,
-					lipgloss.NewStyle().Foreground(lipgloss.Color("#C9D1D9")).Render("Paste token, then press Ctrl+D (Unix) or Ctrl+Z+Enter (Windows)"),
-				))
-
-			inputCard := lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("#00F0FF")).
-				Background(lipgloss.Color("#161B22")).
-				Padding(1, 2).
-				Width(availW).
-				Render(lipgloss.JoinVertical(lipgloss.Left,
-					inputHeader,
-					"",
-					m.paste.View(),
-					"",
-					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF9D")).Render("[Ctrl+S] Verify & Forfeit  •  [Esc] Cancel"),
-				))
-
-			b.WriteString(lipgloss.JoinVertical(lipgloss.Left, nonceContent, "\n", inputCard))
-		}
-		body = b.String()
+		body = box
 
 	case skipPhaseDone:
 		var b strings.Builder
@@ -556,7 +444,7 @@ func (m SkipRoundModel) View() string {
 			Foreground(lipgloss.Color("#F0F6FC")).
 			Padding(1, 2).
 			Width(w - 8).
-			Render(fmt.Sprintf("Target Challenge: Round %d — %s\nPenalty Incurred: −%s Points (50%% of challenge value)\nStatus: PERMANENTLY FORFEITED & LOCKED\nProof: PGP signature verified and stored for non-repudiation.",
+			Render(fmt.Sprintf("Target Challenge: Round %d — %s\nPenalty Incurred: −%s Points (50%% of challenge value)\nStatus: PERMANENTLY FORFEITED & LOCKED\nProof: Password-confirmed authorization.",
 				m.selected.ID, m.selected.Name, formatPoints(m.cost)))
 
 		cta := lipgloss.NewStyle().
@@ -600,11 +488,11 @@ func (m SkipRoundModel) renderSkipHUD(width int) string {
 		Render("BYPASS MECHANICS:") + "\n")
 	detail.WriteString(Truncate("• Penalty equals 50% of the challenge's bounty", maxTextW) + "\n")
 	detail.WriteString(Truncate("• Skipping permanently locks the challenge", maxTextW) + "\n")
-	detail.WriteString(Truncate("• Requires PGP Clearsign verification of team identity", maxTextW) + "\n")
+	detail.WriteString(Truncate("• Requires password confirmation for authorization", maxTextW) + "\n")
 	detail.WriteString(Truncate("• Use only when stuck on critical roadblocks", maxTextW) + "\n\n")
 
 	detail.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).
-		Render("Press [Enter] to initiate PGP signature verification"))
+		Render("Press [Enter] to initiate password confirmation"))
 
 	return lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -614,5 +502,3 @@ func (m SkipRoundModel) renderSkipHUD(width int) string {
 		Width(width).
 		Render(title + detail.String())
 }
-
-
