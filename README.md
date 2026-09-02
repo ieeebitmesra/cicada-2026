@@ -27,7 +27,7 @@ go run ./cmd/admin teams create --name Alpha \
     --ssh-user alpha --password 'changeme123'
 ssh alpha@localhost -p 2222                           # first login = registration
 # put real digests into configs/rounds.yaml via:
-go run ./cmd/admin rounds hash-flag --flag 'IEEE{...}'
+go run ./cmd/admin rounds hash-flag --flag 'PANTHEON{...}'
 ```
 
 Production: `docker compose up -d submission-portal` from this directory.

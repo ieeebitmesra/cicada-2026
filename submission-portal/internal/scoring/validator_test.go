@@ -11,9 +11,9 @@ import (
 const validFlagHash = "" // set in TestHashFlag
 
 func TestHashFlag(t *testing.T) {
-	a := HashFlag("IEEE{test_flag}")
-	b := HashFlag("IEEE{test_flag}")
-	c := HashFlag("IEEE{other}")
+	a := HashFlag("PANTHEON{test_flag}")
+	b := HashFlag("PANTHEON{test_flag}")
+	c := HashFlag("PANTHEON{other}")
 	if a == "" || len(a) != 64 {
 		t.Fatalf("hash length wrong: %q", a)
 	}
@@ -31,24 +31,24 @@ func TestValidatorFormatAndRateLimit(t *testing.T) {
 	if _, err := v.Check(1, "not-a-flag"); err != ErrFlagFormat {
 		t.Errorf("expected ErrFlagFormat, got %v", err)
 	}
-	if _, err := v.Check(1, "IEEE{ok_flag}"); err != nil {
+	if _, err := v.Check(1, "PANTHEON{ok_flag}"); err != nil {
 		t.Errorf("valid flag rejected: %v", err)
 	}
-	long := "IEEE{" + strings.Repeat("a", 300) + "}"
+	long := "PANTHEON{" + strings.Repeat("a", 300) + "}"
 	if _, err := v.Check(1, long); err != ErrFlagTooLong {
 		t.Errorf("expected ErrFlagTooLong, got %v", err)
 	}
 
 	// burst=1 → the second immediate attempt must be limited.
 	v2 := NewFlagValidator(256, 2, 0)
-	if _, err := v2.Check(7, "IEEE{one1}"); err != nil {
+	if _, err := v2.Check(7, "PANTHEON{one1}"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := v2.Check(7, "IEEE{two2}"); err != ErrRateLimited {
+	if _, err := v2.Check(7, "PANTHEON{two2}"); err != ErrRateLimited {
 		t.Errorf("expected ErrRateLimited, got %v", err)
 	}
 	// other teams unaffected
-	if _, err := v2.Check(8, "IEEE{three}"); err != nil {
+	if _, err := v2.Check(8, "PANTHEON{three}"); err != nil {
 		t.Errorf("rate limiter leaked across teams: %v", err)
 	}
 }

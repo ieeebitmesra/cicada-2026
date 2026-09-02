@@ -44,10 +44,10 @@ func TestSubmissionDuplicateGuard(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := db.RecordSubmission(team.ID, 1, "IEEE{x}", true); err != nil {
+	if _, err := db.RecordSubmission(team.ID, 1, "PANTHEON{x}", true); err != nil {
 		t.Fatalf("first correct submission: %v", err)
 	}
-	if _, err := db.RecordSubmission(team.ID, 1, "IEEE{x}", true); err != ErrAlreadySolved {
+	if _, err := db.RecordSubmission(team.ID, 1, "PANTHEON{x}", true); err != ErrAlreadySolved {
 		t.Fatalf("duplicate correct allowed: %v", err)
 	}
 

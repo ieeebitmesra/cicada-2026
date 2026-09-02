@@ -124,7 +124,7 @@ func NewSubmitFlag(svc *scoring.Service, team *models.Team) SubmitFlagModel {
 		Padding(0, 1)
 
 	input := textinput.New()
-	input.Placeholder = "IEEE{...}"
+	input.Placeholder = "PANTHEON{...}"
 	input.CharLimit = 256
 	input.Prompt = "❯ ENTER FLAG: "
 	input.PromptStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00B4D8"))
@@ -281,7 +281,7 @@ func (m *SubmitFlagModel) submit() tea.Cmd {
 		case errors.Is(err, scoring.ErrRoundInactive):
 			text = "Round is inactive."
 		case errors.Is(err, scoring.ErrFlagFormat):
-			text = "Format invalid. Flags must match IEEE{...}"
+			text = "Format invalid. Flags must match PANTHEON{...}"
 		case errors.Is(err, scoring.ErrFlagTooLong):
 			text = "Flag token exceeds maximum length."
 		case strings.Contains(err.Error(), "cooldown"):
@@ -397,7 +397,7 @@ func (m SubmitFlagModel) renderFlagInputTerminal() string {
 
 	advisory := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#8B949E")).
-		Render("Token format: IEEE{...} • Case-sensitive • Rate-limited")
+		Render("Token format: PANTHEON{...} • Case-sensitive • Rate-limited")
 
 	btnHelp := lipgloss.NewStyle().
 		Bold(true).
