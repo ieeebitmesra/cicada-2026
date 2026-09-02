@@ -45,7 +45,7 @@ rounds:
     name: "Challenge 1"
     points: 100
     is_active: true
-    flag_hash: "` + scoring.HashFlag("IEEE{flag_round_1}") + `"
+    flag_hash: "` + scoring.HashFlag("PANTHEON{flag_round_1}") + `"
     hints:
       - type: plain
         text: "Hint 1 plain"
@@ -57,7 +57,7 @@ rounds:
     name: "Challenge 2"
     points: 200
     is_active: true
-    flag_hash: "` + scoring.HashFlag("IEEE{flag_round_2}") + `"
+    flag_hash: "` + scoring.HashFlag("PANTHEON{flag_round_2}") + `"
 `
 	roundsCfg, err := models.ParseRounds([]byte(yamlContent))
 	if err != nil {
@@ -92,7 +92,7 @@ func TestSEC01_SubmitFlagBlocksSolveAfterSkip(t *testing.T) {
 	}
 
 	// Step 2: Attempt to submit flag for the skipped round (MUST return ErrAlreadySkipped)
-	res, err := svc.SubmitFlag(team, 1, "IEEE{flag_round_1}")
+	res, err := svc.SubmitFlag(team, 1, "PANTHEON{flag_round_1}")
 	if err != scoring.ErrAlreadySkipped {
 		t.Fatalf("Expected ErrAlreadySkipped, got res=%v, err=%v", res, err)
 	}
@@ -133,7 +133,7 @@ func TestSEC02_FixedChallengePointsSkipCost(t *testing.T) {
 	}
 
 	// Now solve Round 2 (+200 points)
-	res, err := svc.SubmitFlag(team, 2, "IEEE{flag_round_2}")
+	res, err := svc.SubmitFlag(team, 2, "PANTHEON{flag_round_2}")
 	if err != nil || !res.Correct {
 		t.Fatalf("SubmitFlag(2) failed: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestSEC03_NoScoreLedgerTruncation(t *testing.T) {
 	svc, db, team := setupTestService(t)
 
 	// Step 1: Solve Round 1 (+100 points)
-	res, err := svc.SubmitFlag(team, 1, "IEEE{flag_round_1}")
+	res, err := svc.SubmitFlag(team, 1, "PANTHEON{flag_round_1}")
 	if err != nil || !res.Correct {
 		t.Fatalf("SubmitFlag(1) failed: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestSEC03_NoScoreLedgerTruncation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("tx begin: %v", err)
 	}
-	stmt, err := tx.Prepare(`INSERT INTO submissions (team_id, round_id, flag_input, is_correct, submitted_at) VALUES (?, 1, 'IEEE{wrong}', 0, datetime('now', '+1 second'))`)
+	stmt, err := tx.Prepare(`INSERT INTO submissions (team_id, round_id, flag_input, is_correct, submitted_at) VALUES (?, 1, 'PANTHEON{wrong}', 0, datetime('now', '+1 second'))`)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -264,7 +264,7 @@ func TestSEC06_TokenDrainOnCooldown(t *testing.T) {
 	teamID := int64(42)
 
 	// Attempt 1: Valid submission (consumes 1 token)
-	f1, err1 := flags.Check(teamID, "IEEE{flag_one}")
+	f1, err1 := flags.Check(teamID, "PANTHEON{flag_one}")
 	if err1 != nil {
 		t.Fatalf("Attempt 1 failed: %v", err1)
 	}
@@ -272,7 +272,7 @@ func TestSEC06_TokenDrainOnCooldown(t *testing.T) {
 
 	// Attempt 2: After 2 seconds (cooldown is active, 8s remaining)
 	time.Sleep(100 * time.Millisecond) // short sleep
-	_, err2 := flags.Check(teamID, "IEEE{flag_two}")
+	_, err2 := flags.Check(teamID, "PANTHEON{flag_two}")
 	t.Logf("Attempt 2 result: %v", err2)
 
 	// Notice that in Check(), lim.Allow() was called BEFORE the cooldown check.
@@ -284,7 +284,7 @@ func TestSEC07_ConcurrentSkipRace(t *testing.T) {
 	svc, _, team := setupTestService(t)
 
 	// Solve round 1 to give team 100 points
-	_, _ = svc.SubmitFlag(team, 1, "IEEE{flag_round_1}")
+	_, _ = svc.SubmitFlag(team, 1, "PANTHEON{flag_round_1}")
 
 	// Concurrently attempt SkipRound on round 2 across 2 goroutines
 	var wg sync.WaitGroup

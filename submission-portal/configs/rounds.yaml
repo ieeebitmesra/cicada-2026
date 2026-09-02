@@ -3,7 +3,7 @@
 # flag_hash is the SHA-256 hex digest of the exact flag string (case-sensitive).
 # Generate it with:
 #
-#   ./admin rounds hash-flag --flag 'IEEE{your_secret_flag}'
+#   ./admin rounds hash-flag --flag 'PANTHEON{your_secret_flag}'
 #
 # Hints live here (they are NOT stored in the DB); hint *usage* is tracked in the DB.
 #   type: plain   -> costs 20% of the round's points

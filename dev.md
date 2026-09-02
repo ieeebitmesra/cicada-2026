@@ -92,7 +92,7 @@ go build -o /tmp/admin ./cmd/admin
 /tmp/admin teams list                       # registered=false expected
 
 # wire a known flag into round 1:
-HASH=$(/tmp/admin rounds hash-flag --flag 'IEEE{dev_flag_1}')
+HASH=$(/tmp/admin rounds hash-flag --flag 'PANTHEON{dev_flag_1}')
 sed -i "0,/REPLACE_WITH_SHA256_HEX/s//${HASH}/" configs/rounds.yaml   # first round only (GNU sed)
 go run ./cmd/server                          # restart if already running
 # NOTE: hint TEXT lives in rounds.yaml and is read by the server process —
@@ -110,7 +110,7 @@ Walk through the TUI:
 1. **Registration** is forced on first login: set a new password (min 8 chars),
    confirm it, paste a PGP public key (§4), `Tab` between fields, `Ctrl+S` saves.
 2. **Dashboard** → *Submit Flag* → pick Round 1 → try a wrong flag (error flash,
-   rate-limited if spammed) → submit `IEEE{dev_flag_1}` → success flash.
+   rate-limited if spammed) → submit `PANTHEON{dev_flag_1}` → success flash.
 3. **Scoreboard** shows DevTeam with +100 (or whatever points you configured).
 4. **My Status** shows the ledger (earned/hints/skips).
 5. Reconnect — registration screen must NOT appear again.

@@ -325,7 +325,7 @@ While the TUI list view in `internal/tui/views/submit_flag.go:88-96` visually ma
 1. Team *Alpha* begins the contest with 0 points.
 2. Team *Alpha* skips Round 1 (worth 100 points). Under SEC-02, the penalty recorded is `0.0` points.
 3. Team *Alpha* views the hint or obtains the flag solution through out-of-band collaboration or later solving.
-4. Team *Alpha* submits `IEEE{round1_flag}` via `SubmitFlag`.
+4. Team *Alpha* submits `PANTHEON{round1_flag}` via `SubmitFlag`.
 5. The backend records a valid solve and grants +100 points, completely bypassing the round forfeiture.
 
 #### Technical & Business Impact
@@ -1165,7 +1165,7 @@ To independently verify the resolution of each finding:
 1. **Verify SEC-01 (Skip & Flag Submission Guard)**:
    - Register team `test_team`.
    - Call `svc.SkipRound(team, 1)`. Confirm round 1 is skipped.
-   - Call `svc.SubmitFlag(team, 1, "IEEE{valid_flag_round1}")`.
+   - Call `svc.SubmitFlag(team, 1, "PANTHEON{valid_flag_round1}")`.
    - **Expected Result**: Call returns `ErrAlreadySkipped`. Database does not record solve; points are not awarded.
 
 2. **Verify SEC-03 (Score Truncation)**:
@@ -1197,7 +1197,7 @@ To independently verify the resolution of each finding:
 
 ### 5.4 Functional Compatibility & CTF Workflow Integrity Assessment
 All proposed remediations were specifically evaluated to guarantee zero breakage of normal CTF competition operations:
-- **Flag Submissions**: Legitimate flag submissions adhering to the `IEEE{...}` format proceed normally with standard 30s cooldowns.
+- **Flag Submissions**: Legitimate flag submissions adhering to the `PANTHEON{...}` format proceed normally with standard 30s cooldowns.
 - **Team Registration**: First-time login workflow (password reset + PGP key registration) functions seamlessly; only subsequent malicious attempts to re-register an already registered team are rejected.
 - **Scoreboard Updates**: The live auto-refreshing scoreboard table in the TUI and CSV export in CLI continue to operate identically, with improved deterministic tie-breaking.
 - **Hint Redemption**: Legitimate PGP clearsigned hint requests function identically, protected against race condition duplication.

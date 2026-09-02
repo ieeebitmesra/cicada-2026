@@ -69,7 +69,7 @@ ssh alpha@localhost -p 2222    # first login forces registration
 Admin essentials:
 
 ```bash
-admin rounds hash-flag --flag 'IEEE{...}'      # put digest into rounds.yaml
+admin rounds hash-flag --flag 'PANTHEON{...}'      # put digest into rounds.yaml
 admin rounds load --file configs/rounds.yaml
 admin rounds set-active --round 3 --active false
 admin scoreboard export --format csv --output scores.csv

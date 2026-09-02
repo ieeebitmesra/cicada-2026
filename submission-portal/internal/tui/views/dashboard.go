@@ -268,7 +268,7 @@ func (m DashboardModel) renderTacticalHUD(width int) string {
 
 	detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#58A6FF")).
 		Render("RULES & ADVISORY:") + "\n")
-	detail.WriteString(Truncate("• Flag syntax strictly matches IEEE{...}", maxTextW) + "\n")
+	detail.WriteString(Truncate("• Flag syntax strictly matches PANTHEON{...}", maxTextW) + "\n")
 	detail.WriteString(Truncate("• Flag verification is rate-limited per IP/account", maxTextW) + "\n")
 	detail.WriteString(Truncate("• Hints require local PGP clearsigning of nonce", maxTextW) + "\n")
 	detail.WriteString(Truncate("• Skip penalties are permanent for the round", maxTextW) + "\n\n")

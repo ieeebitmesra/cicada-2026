@@ -107,7 +107,7 @@ ss -tlnp | grep 2222
 1. Compute flag digests and put them in `submission-portal/configs/rounds.yaml`:
 
 ```bash
-./admin rounds hash-flag --flag 'IEEE{real_flag_here}'
+./admin rounds hash-flag --flag 'PANTHEON{real_flag_here}'
 # -> paste hex digest into round's flag_hash field
 ```
 

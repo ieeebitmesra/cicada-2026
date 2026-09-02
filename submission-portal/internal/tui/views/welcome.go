@@ -80,7 +80,7 @@ func (m WelcomeModel) View() string {
 	c1Body.WriteString("\n• Challenges operate in isolated sandboxed targets.\n")
 	c1Body.WriteString("• Solve rounds in any order at your team's discretion.\n")
 	c1Body.WriteString("• Valid flags conform strictly to: ")
-	c1Body.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFB800")).Render("IEEE{...}") + "\n")
+	c1Body.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFB800")).Render("PANTHEON{...}") + "\n")
 	c1Body.WriteString("• Submissions are strictly rate-limited against brute-force.\n")
 
 	// Card 2: Scoring Economics

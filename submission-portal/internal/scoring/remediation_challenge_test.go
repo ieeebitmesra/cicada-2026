@@ -119,7 +119,7 @@ func TestMigration_002_SecurityHardening_WAL_Compatibility(t *testing.T) {
 		t.Fatalf("CreateTeam failed: %v", err)
 	}
 	if err := db.UpsertRounds([]models.RoundDef{
-		{ID: 1, Name: "R1", Points: 100, FlagHash: scoring.HashFlag("IEEE{r1}"), IsActive: true},
+		{ID: 1, Name: "R1", Points: 100, FlagHash: scoring.HashFlag("PANTHEON{r1}"), IsActive: true},
 	}); err != nil {
 		t.Fatalf("UpsertRounds failed: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestScoreboardTieBreaking_ViewVsGoMethod(t *testing.T) {
 	alphaID, _ := db.CreateTeam("Alpha", "alpha", passHash)
 
 	db.UpsertRounds([]models.RoundDef{
-		{ID: 1, Name: "R1", Points: 100, FlagHash: scoring.HashFlag("IEEE{r1}"), IsActive: true},
+		{ID: 1, Name: "R1", Points: 100, FlagHash: scoring.HashFlag("PANTHEON{r1}"), IsActive: true},
 	})
 
 	// Team Beta solves R1 at T0 (earlier)
@@ -172,13 +172,13 @@ func TestScoreboardTieBreaking_ViewVsGoMethod(t *testing.T) {
 	// In CTF competition rules: Beta achieved 100 points FIRST, so Beta MUST be Rank #1, Alpha Rank #2.
 	
 	// Insert Beta submission with earlier timestamp
-	_, err := db.Exec(`INSERT INTO submissions (team_id, round_id, flag_input, is_correct, submitted_at) VALUES (?, 1, 'IEEE{r1}', 1, '2026-08-30 10:00:00')`, betaID)
+	_, err := db.Exec(`INSERT INTO submissions (team_id, round_id, flag_input, is_correct, submitted_at) VALUES (?, 1, 'PANTHEON{r1}', 1, '2026-08-30 10:00:00')`, betaID)
 	if err != nil {
 		t.Fatalf("insert beta solve: %v", err)
 	}
 
 	// Insert Alpha submission with later timestamp
-	_, err = db.Exec(`INSERT INTO submissions (team_id, round_id, flag_input, is_correct, submitted_at) VALUES (?, 1, 'IEEE{r1}', 1, '2026-08-30 10:00:10')`, alphaID)
+	_, err = db.Exec(`INSERT INTO submissions (team_id, round_id, flag_input, is_correct, submitted_at) VALUES (?, 1, 'PANTHEON{r1}', 1, '2026-08-30 10:00:10')`, alphaID)
 	if err != nil {
 		t.Fatalf("insert alpha solve: %v", err)
 	}
@@ -190,40 +190,37 @@ func TestScoreboardTieBreaking_ViewVsGoMethod(t *testing.T) {
 	}
 	defer rows.Close()
 
-	var viewRanks []string
+	var viewOrder []string
 	for rows.Next() {
-		var name, solveAt string
+		var name string
 		var score float64
-		if err := rows.Scan(&name, &score, &solveAt); err != nil {
-			t.Fatalf("scan view: %v", err)
+		var lastSolve any
+		if err := rows.Scan(&name, &score, &lastSolve); err != nil {
+			t.Fatalf("scan view row: %v", err)
 		}
-		viewRanks = append(viewRanks, name)
+		viewOrder = append(viewOrder, name)
 	}
+	t.Logf("Direct View Query Order: %v (Rank 1: %s, Rank 2: %s)", viewOrder, viewOrder[0], viewOrder[1])
 
-	t.Logf("Direct View Query Order: %v (Rank 1: %s, Rank 2: %s)", viewRanks, viewRanks[0], viewRanks[1])
-	if len(viewRanks) == 2 && viewRanks[0] != "Beta" {
-		t.Errorf("Scoreboard View failed: Beta solved earlier, but got %s at Rank 1", viewRanks[0])
-	}
-
-	// 2. Query via existing Go method db.Scoreboard()
-	goBoard, err := db.Scoreboard()
+	// 2. Query through db.Scoreboard() Go method
+	board, err := db.Scoreboard()
 	if err != nil {
 		t.Fatalf("db.Scoreboard() failed: %v", err)
 	}
+	var goMethodOrder []string
+	for i, entry := range board {
+		goMethodOrder = append(goMethodOrder, fmt.Sprintf("%d: %s (%v)", i+1, entry.TeamName, entry.TotalScore))
+	}
+	t.Logf("db.Scoreboard() Go Method Order: %v", goMethodOrder)
 
-	t.Logf("db.Scoreboard() Go Method Order: [1: %s (%v), 2: %s (%v)]", 
-		goBoard[0].TeamName, goBoard[0].TotalScore, goBoard[1].TeamName, goBoard[1].TotalScore)
-
-	// In the unpatched Go code, store/rounds.go:150 executes:
-	// `SELECT team_id, team_name, total_score, rounds_solved FROM scoreboard ORDER BY total_score DESC, team_name ASC`
-	// Because of explicit `team_name ASC`, "Alpha" overrides "Beta"!
-	if goBoard[0].TeamName == "Alpha" {
-		t.Logf("CRITICAL FINDING: db.Scoreboard() in store/rounds.go:150 overrides the 002 migration view ordering with explicit `team_name ASC`! Go code must also be patched to remove `team_name ASC` or sort by `last_solve_at ASC`.")
+	// In patched view & Go method, Beta MUST be Rank 1
+	if board[0].TeamName != "Beta" {
+		t.Errorf("CRITICAL BUG: Tie-breaking failed in db.Scoreboard()! Expected Beta as Rank 1, got: %s", board[0].TeamName)
 	}
 }
 
 // -------------------------------------------------------------------------------------------------
-// Test 3: Adversarially Test Proposed Patched SubmitFlag Logic (Patch 1)
+// Test 3: Adversarially Test Proposed SubmitFlag Implementation (Patch 1)
 // -------------------------------------------------------------------------------------------------
 func TestPatchedSubmitFlag_Workflow(t *testing.T) {
 	db, _ := setupRemediationDB(t)
@@ -233,9 +230,9 @@ func TestPatchedSubmitFlag_Workflow(t *testing.T) {
 	team, _ := db.GetTeam(teamID)
 
 	roundDefs := []models.RoundDef{
-		{ID: 1, Name: "R1", Points: 100, FlagHash: scoring.HashFlag("IEEE{flag_round_1}"), IsActive: true},
-		{ID: 2, Name: "R2", Points: 200, FlagHash: strings.ToUpper(scoring.HashFlag("IEEE{flag_round_2}")), IsActive: true}, // Test uppercase hash
-		{ID: 3, Name: "R3", Points: 300, FlagHash: scoring.HashFlag("IEEE{flag_round_3}"), IsActive: false}, // Inactive round
+		{ID: 1, Name: "R1", Points: 100, FlagHash: scoring.HashFlag("PANTHEON{flag_round_1}"), IsActive: true},
+		{ID: 2, Name: "R2", Points: 200, FlagHash: strings.ToUpper(scoring.HashFlag("PANTHEON{flag_round_2}")), IsActive: true}, // Test uppercase hash
+		{ID: 3, Name: "R3", Points: 300, FlagHash: scoring.HashFlag("PANTHEON{flag_round_3}"), IsActive: false}, // Inactive round
 	}
 	db.UpsertRounds(roundDefs)
 	rawYaml := fmt.Sprintf(`
@@ -255,7 +252,7 @@ rounds:
     points: 300
     is_active: false
     flag_hash: "%s"
-`, scoring.HashFlag("IEEE{flag_round_1}"), strings.ToUpper(scoring.HashFlag("IEEE{flag_round_2}")), scoring.HashFlag("IEEE{flag_round_3}"))
+`, scoring.HashFlag("PANTHEON{flag_round_1}"), strings.ToUpper(scoring.HashFlag("PANTHEON{flag_round_2}")), scoring.HashFlag("PANTHEON{flag_round_3}"))
 	roundsCfg, err := models.ParseRounds([]byte(rawYaml))
 	if err != nil {
 		t.Fatalf("ParseRounds failed: %v", err)
@@ -306,7 +303,7 @@ rounds:
 	}
 
 	// 1. Normal valid submission
-	res1, err := patchedSubmitFlag(db, roundsCfg, flags, team, 1, "IEEE{flag_round_1}")
+	res1, err := patchedSubmitFlag(db, roundsCfg, flags, team, 1, "PANTHEON{flag_round_1}")
 	if err != nil || !res1.Correct || res1.PointsAwarded != 100.0 {
 		t.Fatalf("Valid submit failed: res=%v, err=%v", res1, err)
 	}
@@ -314,7 +311,7 @@ rounds:
 
 	// 2. Duplicate submission for solved round
 	time.Sleep(150 * time.Millisecond) // satisfy cooldown
-	_, errDup := patchedSubmitFlag(db, roundsCfg, flags, team, 1, "IEEE{flag_round_1}")
+	_, errDup := patchedSubmitFlag(db, roundsCfg, flags, team, 1, "PANTHEON{flag_round_1}")
 	if errDup != store.ErrAlreadySolved {
 		t.Errorf("Expected ErrAlreadySolved, got %v", errDup)
 	} else {
@@ -324,7 +321,7 @@ rounds:
 	// 3. Skip Round 2 and attempt submission
 	db.RecordSkip(team.ID, 2, 100.0)
 	time.Sleep(150 * time.Millisecond)
-	_, errSkip := patchedSubmitFlag(db, roundsCfg, flags, team, 2, "IEEE{flag_round_2}")
+	_, errSkip := patchedSubmitFlag(db, roundsCfg, flags, team, 2, "PANTHEON{flag_round_2}")
 	if errSkip != scoring.ErrAlreadySkipped {
 		t.Errorf("Expected ErrAlreadySkipped, got %v", errSkip)
 	} else {
@@ -333,7 +330,7 @@ rounds:
 
 	// 4. Inactive round submission
 	time.Sleep(150 * time.Millisecond)
-	_, errInact := patchedSubmitFlag(db, roundsCfg, flags, team, 3, "IEEE{flag_round_3}")
+	_, errInact := patchedSubmitFlag(db, roundsCfg, flags, team, 3, "PANTHEON{flag_round_3}")
 	if errInact != scoring.ErrRoundInactive {
 		t.Errorf("Expected ErrRoundInactive, got %v", errInact)
 	} else {
@@ -342,10 +339,10 @@ rounds:
 
 	// 5. Wrong flag submission
 	time.Sleep(150 * time.Millisecond)
-	resWrong, errWrong := patchedSubmitFlag(db, roundsCfg, flags, team, 1, "IEEE{wrong_flag_value}")
+	resWrong, errWrong := patchedSubmitFlag(db, roundsCfg, flags, team, 1, "PANTHEON{wrong_flag_value}")
 	// Wait, round 1 was solved, so it returns ErrAlreadySolved!
 	// Let's test wrong flag on unattempted round 4
-	roundDefs2 := append(roundDefs, models.RoundDef{ID: 4, Name: "R4", Points: 400, FlagHash: scoring.HashFlag("IEEE{r4}"), IsActive: true})
+	roundDefs2 := append(roundDefs, models.RoundDef{ID: 4, Name: "R4", Points: 400, FlagHash: scoring.HashFlag("PANTHEON{r4}"), IsActive: true})
 	db.UpsertRounds(roundDefs2)
 	rawYaml4 := fmt.Sprintf(`%s
   - id: 4
@@ -353,11 +350,11 @@ rounds:
     points: 400
     is_active: true
     flag_hash: "%s"
-`, strings.TrimSpace(rawYaml), scoring.HashFlag("IEEE{r4}"))
+`, strings.TrimSpace(rawYaml), scoring.HashFlag("PANTHEON{r4}"))
 	roundsCfg2, _ := models.ParseRounds([]byte(rawYaml4))
 
 	time.Sleep(150 * time.Millisecond)
-	resWrong, errWrong = patchedSubmitFlag(db, roundsCfg2, flags, team, 4, "IEEE{wrong_flag_value}")
+	resWrong, errWrong = patchedSubmitFlag(db, roundsCfg2, flags, team, 4, "PANTHEON{wrong_flag_value}")
 	if errWrong != nil || resWrong.Correct || resWrong.PointsAwarded != 0 {
 		t.Errorf("Expected incorrect submission with 0 points, got res=%v err=%v", resWrong, errWrong)
 	} else {
@@ -403,15 +400,15 @@ func TestPatchedBreakdown_NoScoreTruncation(t *testing.T) {
 	teamID, _ := db.CreateTeam("Team Alpha", "alpha", passHash)
 
 	roundDefs := []models.RoundDef{
-		{ID: 1, Name: "R1", Points: 100, FlagHash: scoring.HashFlag("IEEE{r1}"), IsActive: true},
-		{ID: 2, Name: "R2", Points: 250, FlagHash: scoring.HashFlag("IEEE{r2}"), IsActive: true},
-		{ID: 3, Name: "R3", Points: 100, FlagHash: scoring.HashFlag("IEEE{r3}"), IsActive: true},
+		{ID: 1, Name: "R1", Points: 100, FlagHash: scoring.HashFlag("PANTHEON{r1}"), IsActive: true},
+		{ID: 2, Name: "R2", Points: 250, FlagHash: scoring.HashFlag("PANTHEON{r2}"), IsActive: true},
+		{ID: 3, Name: "R3", Points: 100, FlagHash: scoring.HashFlag("PANTHEON{r3}"), IsActive: true},
 	}
 	db.UpsertRounds(roundDefs)
 
 	// Team solves R1 and R2
-	db.RecordSubmission(teamID, 1, "IEEE{r1}", true)
-	db.RecordSubmission(teamID, 2, "IEEE{r2}", true)
+	db.RecordSubmission(teamID, 1, "PANTHEON{r1}", true)
+	db.RecordSubmission(teamID, 2, "PANTHEON{r2}", true)
 	db.RecordHintUsage(teamID, 1, "plain", 0, "proof1", 20.0)
 	db.RecordSkip(teamID, 3, 50.0) // skip a 100pt round
 
@@ -420,7 +417,7 @@ func TestPatchedBreakdown_NoScoreTruncation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("begin: %v", err)
 	}
-	stmt, _ := tx.Prepare(`INSERT INTO submissions (team_id, round_id, flag_input, is_correct, submitted_at) VALUES (?, 1, 'IEEE{bad}', 0, datetime('now'))`)
+	stmt, _ := tx.Prepare(`INSERT INTO submissions (team_id, round_id, flag_input, is_correct, submitted_at) VALUES (?, 1, 'PANTHEON{bad}', 0, datetime('now'))`)
 	for i := 0; i < 15000; i++ {
 		stmt.Exec(teamID)
 	}
@@ -671,13 +668,13 @@ func TestPatchedFlagValidator_CooldownTokenDrain(t *testing.T) {
 	teamID := int64(100)
 
 	// 1. Initial attempt consumes 1 token
-	_, err1 := check(teamID, "IEEE{flag1}")
+	_, err1 := check(teamID, "PANTHEON{flag1}")
 	if err1 != nil {
 		t.Fatalf("Attempt 1 failed: %v", err1)
 	}
 
 	// 2. Immediate 2nd attempt during cooldown (rejected by cooldown, NOT consuming any future token)
-	_, err2 := check(teamID, "IEEE{flag2}")
+	_, err2 := check(teamID, "PANTHEON{flag2}")
 	if !strings.Contains(err2.Error(), "cooldown active") {
 		t.Fatalf("Expected cooldown error, got %v", err2)
 	}
@@ -687,7 +684,7 @@ func TestPatchedFlagValidator_CooldownTokenDrain(t *testing.T) {
 
 	// Since perMinute is low, token bucket hasn't refilled. It should return ErrRateLimited.
 	// But crucially, attempt 2 did NOT drain any additional tokens or corrupt rate limiter state.
-	_, err3 := check(teamID, "IEEE{flag3}")
+	_, err3 := check(teamID, "PANTHEON{flag3}")
 	t.Logf("Attempt 3 after cooldown result: %v", err3)
 }
 
@@ -802,7 +799,7 @@ func TestInactiveRound_ConsistentGuardsAcrossOperations(t *testing.T) {
 			ID:       1,
 			Name:     "Challenge 1",
 			Points:   100,
-			FlagHash: scoring.HashFlag("IEEE{flag_round_1}"),
+			FlagHash: scoring.HashFlag("PANTHEON{flag_round_1}"),
 			IsActive: true,
 			Hints: []models.HintDef{
 				{Type: "plain", Text: "Plain hint 1"},
@@ -820,7 +817,7 @@ func TestInactiveRound_ConsistentGuardsAcrossOperations(t *testing.T) {
 	}
 
 	// 1. SubmitFlag correctly checks DB and rejects
-	_, errSub := svc.SubmitFlag(team, 1, "IEEE{flag_round_1}")
+	_, errSub := svc.SubmitFlag(team, 1, "PANTHEON{flag_round_1}")
 	if errSub != scoring.ErrRoundInactive {
 		t.Errorf("SubmitFlag: expected ErrRoundInactive, got %v", errSub)
 	} else {

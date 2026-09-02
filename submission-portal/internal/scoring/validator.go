@@ -16,16 +16,16 @@ import (
 )
 
 var (
-	ErrFlagFormat     = errors.New("invalid flag format (expected IEEE{...})")
+	ErrFlagFormat     = errors.New("invalid flag format (expected PANTHEON{...})")
 	ErrFlagTooLong    = errors.New("flag too long")
 	ErrRateLimited    = errors.New("too many submissions — slow down")
 	ErrCooldownActive = errors.New("cooldown active between submissions")
 )
 
-// flagPattern: flags look like IEEE{...} with printable ASCII inside.
+// flagPattern: flags look like PANTHEON{...} with printable ASCII inside.
 // Braces are required by the format and therefore exempt from the generic
 // shell-metacharacter filter applied to other free-text inputs.
-var flagPattern = regexp.MustCompile(`^IEEE\{[!-~]{4,240}}$`)
+var flagPattern = regexp.MustCompile(`^PANTHEON\{[!-~]{4,240}}$`)
 
 // FlagValidator enforces flag format + per-team submission rate limits.
 type FlagValidator struct {

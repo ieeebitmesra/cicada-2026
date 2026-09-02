@@ -28,7 +28,7 @@ Usage:
   admin rounds list
   admin rounds set-active --round N --active true|false
   admin rounds load    --file configs/rounds.yaml
-  admin rounds hash-flag --flag 'IEEE{...}'
+  admin rounds hash-flag --flag 'PANTHEON{...}'
 
   admin scoreboard
   admin scoreboard export --format csv --output scores.csv
