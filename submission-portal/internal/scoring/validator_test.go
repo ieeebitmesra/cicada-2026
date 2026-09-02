@@ -89,3 +89,36 @@ func TestChallengeParseAndVerify(t *testing.T) {
 		t.Error("malformed challenge parsed")
 	}
 }
+
+func TestSkipChallengeParseAndVerify(t *testing.T) {
+	team := &models.Team{SSHUser: "alpha"}
+
+	now := time.Now().UTC()
+	ch := BuildSkipChallenge(team, 2, "nonce456", now)
+	fields := ParseSkipChallenge(ch)
+	if fields["round"] != "2" || fields["nonce"] != "nonce456" || fields["team"] != "alpha" || fields["ts"] == "" {
+		t.Fatalf("skip challenge parse failed: %#v", fields)
+	}
+
+	if err := VerifySkipChallenge(ch, team, 2, time.Minute); err != nil {
+		t.Errorf("fresh skip challenge rejected: %v", err)
+	}
+
+	// Wrong round/team rejected.
+	if err := VerifySkipChallenge(ch, team, 3, time.Minute); err == nil {
+		t.Error("mismatched round accepted")
+	}
+	if other := (&models.Team{SSHUser: "beta"}); VerifySkipChallenge(ch, other, 2, time.Minute) == nil {
+		t.Error("wrong team accepted")
+	}
+
+	// Stale challenge rejected.
+	old := BuildSkipChallenge(team, 2, "nonce456", now.Add(-16*time.Minute))
+	if err := VerifySkipChallenge(old, team, 2, 15*time.Minute); err != ErrChallengeStale {
+		t.Errorf("stale skip challenge accepted: %v", err)
+	}
+
+	if f := ParseSkipChallenge("invalid-marker\nround=1"); f != nil {
+		t.Error("malformed skip challenge parsed")
+	}
+}

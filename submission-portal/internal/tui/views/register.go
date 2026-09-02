@@ -38,23 +38,33 @@ type RegisterModel struct {
 // NewRegister builds the registration form.
 func NewRegister(db *store.DB, team *models.Team) RegisterModel {
 	pass := textinput.New()
-	pass.Placeholder = "New password (min 8 chars)"
+	pass.Placeholder = "Enter new password (min 8 characters)"
 	pass.EchoMode = textinput.EchoPassword
 	pass.CharLimit = 128
-	pass.Width = 40
+	pass.Width = 44
+	pass.Prompt = "❯ "
+	pass.PromptStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00B4D8"))
+	pass.TextStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F8FAFC"))
 
 	confirm := textinput.New()
-	confirm.Placeholder = "Confirm password"
+	confirm.Placeholder = "Confirm your password"
 	confirm.EchoMode = textinput.EchoPassword
 	confirm.CharLimit = 128
-	confirm.Width = 40
+	confirm.Width = 44
+	confirm.Prompt = "❯ "
+	confirm.PromptStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00B4D8"))
+	confirm.TextStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F8FAFC"))
 
 	pk := textarea.New()
-	pk.Placeholder = "Paste your ARMORED PGP PUBLIC KEY here\n(-----BEGIN PGP PUBLIC KEY BLOCK----- ...)"
+	pk.Placeholder = "-----BEGIN PGP PUBLIC KEY BLOCK-----\n...\n-----END PGP PUBLIC KEY BLOCK-----"
 	pk.CharLimit = 16384
-	pk.SetWidth(70)
-	pk.SetHeight(8)
+	pk.SetWidth(64)
+	pk.SetHeight(6)
 	pk.ShowLineNumbers = false
+	pk.FocusedStyle.Base = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#00B4D8")).
+		Background(lipgloss.Color("#0B0F19"))
 
 	m := RegisterModel{passInput: pass, confirmInput: confirm, pubkey: pk, db: db, team: team}
 	m.refocus()
@@ -78,8 +88,8 @@ func (m *RegisterModel) refocus() {
 // SetSize implements sizing.
 func (m *RegisterModel) SetSize(w, h int) {
 	m.width, m.height = w, h
-	if w > 8 {
-		m.pubkey.SetWidth(w - 10)
+	if w > 14 {
+		m.pubkey.SetWidth(w - 14)
 	}
 }
 
@@ -135,7 +145,7 @@ func (m *RegisterModel) submit() tea.Cmd {
 	m.team.PGPPubkey = newKey
 	m.team.Registered = true
 
-	flash := func() tea.Msg { return msg.StatusFlash{Text: "Registration complete. Welcome!", Success: true} }
+	flash := func() tea.Msg { return msg.StatusFlash{Text: "Account registered successfully. Welcome!", Success: true} }
 	nav := func() tea.Msg { return msg.Navigate{Target: msg.TDashboard} }
 	return tea.Sequence(flash, nav)
 }
@@ -148,42 +158,112 @@ func validateRegistration(pass, confirm, pubkey string) error {
 		return fmt.Errorf("passwords do not match")
 	}
 	if !strings.Contains(pubkey, "-----BEGIN PGP PUBLIC KEY BLOCK-----") {
-		return fmt.Errorf("paste an armored PGP PUBLIC key")
+		return fmt.Errorf("paste an armored PGP PUBLIC key block")
 	}
 	return nil
 }
 
 // View renders the form.
 func (m RegisterModel) View() string {
-	var b strings.Builder
-	b.WriteString("First-time setup — secure your team account.\n\n")
-
-	focusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#3FA7DC"))
-	b.WriteString(focusStyle.Render(func() string {
-		if m.focus == regFocusPass {
-			return "▸ Password:"
-		}
-		return "  Password:"
-	}()) + "\n  " + m.passInput.View() + "\n\n")
-
-	b.WriteString(focusStyle.Render(func() string {
-		if m.focus == regFocusConfirm {
-			return "▸ Confirm :"
-		}
-		return "  Confirm :"
-	}()) + "\n  " + m.confirmInput.View() + "\n\n")
-
-	b.WriteString(focusStyle.Render(func() string {
-		if m.focus == regFocusPubkey {
-			return "▸ PGP public key:"
-		}
-		return "  PGP public key:"
-	}()) + "\n" + m.pubkey.View() + "\n")
-
-	if m.err != "" {
-		b.WriteString("\n" + lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF5252")).Render("✗ "+m.err) + "\n")
+	w := m.width
+	if w < 40 {
+		w = 40
 	}
 
-	b.WriteString("\n[Tab] next field  [Ctrl+S] register")
-	return lipgloss.NewStyle().Width(m.width).Padding(1, 2).Render(b.String())
+	header := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#0B0F19")).
+		Background(lipgloss.Color("#00F0FF")).
+		Padding(0, 1).
+		Render(" INITIAL ACCOUNT PROVISIONING ")
+
+	subtitle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#C9D1D9")).
+		Render("\nFirst-time login detected. Secure your team account with a password and PGP key.\n")
+
+	// Form inputs styling
+	labelActive := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00F0FF"))
+	labelDim := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#8B949E"))
+
+	// Field 1: Password
+	lblPass := labelDim.Render("  Password (min 8 characters):")
+	if m.focus == regFocusPass {
+		lblPass = labelActive.Render("▸ Password (min 8 characters):")
+	}
+	field1 := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(func() lipgloss.Color {
+			if m.focus == regFocusPass {
+				return lipgloss.Color("#00F0FF")
+			}
+			return lipgloss.Color("#30363D")
+		}()).
+		Background(lipgloss.Color("#0D1117")).
+		Padding(0, 1).
+		Render(m.passInput.View())
+
+	// Field 2: Confirm
+	lblConfirm := labelDim.Render("  Confirm Password:")
+	if m.focus == regFocusConfirm {
+		lblConfirm = labelActive.Render("▸ Confirm Password:")
+	}
+	field2 := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(func() lipgloss.Color {
+			if m.focus == regFocusConfirm {
+				return lipgloss.Color("#00F0FF")
+			}
+			return lipgloss.Color("#30363D")
+		}()).
+		Background(lipgloss.Color("#0D1117")).
+		Padding(0, 1).
+		Render(m.confirmInput.View())
+
+	// Field 3: PGP Public Key
+	lblPubkey := labelDim.Render("  Armored PGP Public Key ($ gpg --armor --export <id>):")
+	if m.focus == regFocusPubkey {
+		lblPubkey = labelActive.Render("▸ Armored PGP Public Key ($ gpg --armor --export <id>):")
+	}
+	field3 := m.pubkey.View()
+
+	var errBox string
+	if m.err != "" {
+		errBox = "\n" + lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#FF3860")).
+			Background(lipgloss.Color("#450A1A")).
+			Bold(true).
+			Foreground(lipgloss.Color("#F0F6FC")).
+			Padding(0, 1).
+			Render("✖ "+m.err) + "\n"
+	}
+
+	helpBar := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#8B949E")).
+		Render("\n[Tab] Next Field  •  [Shift+Tab] Previous Field  •  [Ctrl+S] Save Credentials")
+
+	formBox := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#30363D")).
+		Background(lipgloss.Color("#161B22")).
+		Padding(1, 2).
+		Width(w - 6).
+		Render(lipgloss.JoinVertical(lipgloss.Left,
+			lblPass,
+			field1,
+			"",
+			lblConfirm,
+			field2,
+			"",
+			lblPubkey,
+			field3,
+			errBox,
+			helpBar,
+		))
+
+	return lipgloss.NewStyle().
+		Width(m.width).
+		Padding(1, 2).
+		Render(lipgloss.JoinVertical(lipgloss.Left, header, subtitle, formBox))
 }
+

@@ -170,7 +170,59 @@ func (s *Service) PreviewSkipCost(teamID int64, roundID int) (float64, error) {
 	return SkipCost(round.Points), nil
 }
 
-// SkipRound applies the skip penalty and records it.
+// SkipChallenge generates the challenge string for skipping a round with PGP verification.
+func (s *Service) SkipChallenge(team *models.Team, roundID int) (challenge string, cost float64, err error) {
+	dbRound, err := s.DB.GetRound(roundID)
+	if err != nil || !dbRound.IsActive {
+		return "", 0, ErrRoundInactive
+	}
+	round := s.Rounds.Def(roundID)
+	if round == nil {
+		return "", 0, ErrRoundInactive
+	}
+	solved, err := s.DB.HasSolvedRound(team.ID, roundID)
+	if err != nil {
+		return "", 0, err
+	}
+	if solved {
+		return "", 0, ErrSolvedNoSkip
+	}
+	skipped, err := s.DB.HasSkipped(team.ID, roundID)
+	if err != nil {
+		return "", 0, err
+	}
+	if skipped {
+		return "", 0, ErrAlreadySkipped
+	}
+
+	nonce := auth.RandomChallengeToken()
+	challenge = BuildSkipChallenge(team, roundID, nonce, time.Now())
+	return challenge, SkipCost(round.Points), nil
+}
+
+// ExecuteSkip verifies the clearsigned PGP challenge and applies the skip forfeiture penalty.
+func (s *Service) ExecuteSkip(team *models.Team, roundID int, signed string) (cost float64, err error) {
+	if len(signed) > 8192 {
+		return 0, errors.New("PGP message too long")
+	}
+
+	dbRound, err := s.DB.GetRound(roundID)
+	if err != nil || !dbRound.IsActive {
+		return 0, ErrRoundInactive
+	}
+
+	body, err := auth.VerifyClearsign(team.PGPPubkey, signed)
+	if err != nil {
+		return 0, err
+	}
+	if err := VerifySkipChallenge(body, team, roundID, s.HintValidity); err != nil {
+		return 0, err
+	}
+
+	return s.SkipRound(team, roundID)
+}
+
+// SkipRound applies the skip penalty directly (used internally or by admin/tests).
 func (s *Service) SkipRound(team *models.Team, roundID int) (cost float64, err error) {
 	round := s.Rounds.Def(roundID)
 	if round == nil {

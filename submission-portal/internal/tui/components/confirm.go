@@ -1,6 +1,8 @@
 package components
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -74,34 +76,75 @@ func (c *Confirm) emit(yes, cancelled bool) tea.Cmd {
 	}
 }
 
-// View renders the dialog box.
+// View renders the modal dialog box.
 func (c *Confirm) View() string {
 	if !c.active {
 		return ""
 	}
-	base := lipgloss.NewStyle().Padding(0, 2)
-	sel := lipgloss.NewStyle().Bold(true).
-		Background(lipgloss.Color("#00629B")).
-		Foreground(lipgloss.Color("#FFFFFF")).
+
+	header := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#0B0F19")).
+		Background(lipgloss.Color("#FFB800")).
+		Padding(0, 1).
+		Render("⚠ CONFIRMATION REQUIRED")
+
+	question := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#F0F6FC")).
+		Render(c.Question)
+
+	var detailLines string
+	if len(c.Details) > 0 {
+		var dParts []string
+		for _, d := range c.Details {
+			dParts = append(dParts, "  • "+d)
+		}
+		detailLines = "\n" + strings.Join(dParts, "\n") + "\n"
+	}
+
+	btnBase := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#8B949E")).
+		Background(lipgloss.Color("#161B22")).
 		Padding(0, 2)
 
-	no := base.Render("No")
-	yes := base.Render("Yes")
+	btnSelectedNo := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#F0F6FC")).
+		Background(lipgloss.Color("#FF3860")).
+		Padding(0, 2).
+		Render("[ ✖ No, Cancel ]")
+
+	btnSelectedYes := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#0B0F19")).
+		Background(lipgloss.Color("#00FF9D")).
+		Padding(0, 2).
+		Render("[ ✔ Yes, Proceed ]")
+
+	noBtn := btnBase.Render("  ✖ No, Cancel  ")
+	yesBtn := btnBase.Render("  ✔ Yes, Proceed  ")
+
 	if c.selected == 0 {
-		no = sel.Render("No")
+		noBtn = btnSelectedNo
 	} else {
-		yes = sel.Render("Yes")
+		yesBtn = btnSelectedYes
 	}
 
-	body := c.Question + "\n\n"
-	for _, d := range c.Details {
-		body += d + "\n"
-	}
-	body += "\n      " + no + "    " + yes
+	btnRow := lipgloss.JoinHorizontal(lipgloss.Center, noBtn, "    ", yesBtn)
+
+	navHelp := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#8B949E")).
+		Render("[←/→] Toggle Selection  •  [Enter] Confirm  •  [Esc] Cancel")
+
+	body := header + "\n\n" + question + "\n" + detailLines + "\n" + btnRow + "\n\n" + navHelp
 
 	return lipgloss.NewStyle().
-		Border(lipgloss.DoubleBorder()).
-		BorderForeground(lipgloss.Color("#FFB300")).
-		Padding(1, 2).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#FFB800")).
+		Background(lipgloss.Color("#161B22")).
+		Padding(1, 3).
 		Render(body)
 }
+

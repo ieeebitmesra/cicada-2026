@@ -2,7 +2,6 @@
 package tui
 
 import (
-	"strconv"
 	"strings"
 	"time"
 
@@ -198,32 +197,56 @@ func (m RootModel) currentScore() string {
 	if err != nil {
 		return "?"
 	}
-	return strconv.FormatFloat(b.Total, 'f', -1, 64)
+	return FormatPoints(b.Total)
+}
+
+func (m RootModel) viewName() string {
+	switch m.state {
+	case viewWelcome:
+		return "PORTAL ACCESS"
+	case viewRegister:
+		return "ACCOUNT PROVISIONING"
+	case viewDashboard:
+		return "COMMAND DECK"
+	case viewSubmitFlag:
+		return "FLAG INGESTION"
+	case viewRequestHint:
+		return "TACTICAL INTEL"
+	case viewSkipRound:
+		return "STRATEGIC BYPASS"
+	case viewScoreboard:
+		return "GLOBAL LEADERBOARD"
+	case viewTeamStatus:
+		return "TEAM DOSSIER"
+	}
+	return ""
 }
 
 func (m RootModel) footerBindings() []string {
 	switch m.state {
 	case viewWelcome:
-		return []string{"[Enter] continue", "[Ctrl+C] quit"}
+		return []string{"[Enter] Initialize Terminal", "[Ctrl+C] Quit"}
 	case viewRegister:
-		return []string{"[Tab] next field", "[Ctrl+S] register", "[Ctrl+C] quit"}
+		return []string{"[Tab] Next Field", "[Shift+Tab] Prev Field", "[Ctrl+S] Save Credentials", "[Ctrl+C] Quit"}
 	case viewDashboard:
-		return []string{"[↑/↓] navigate", "[Enter] select", "[r] refresh", "[Ctrl+C] quit"}
-	case viewSubmitFlag, viewRequestHint:
-		return []string{"[Esc] back", "[Ctrl+S] confirm", "[Ctrl+C] quit"}
+		return []string{"[↑/↓] Navigate Directives", "[Enter] Select", "[r] Refresh", "[Ctrl+C] Quit"}
+	case viewSubmitFlag:
+		return []string{"[↑/↓] Navigate", "[Enter] Select/Submit", "[Esc] Back", "[Ctrl+C] Quit"}
+	case viewRequestHint:
+		return []string{"[↑/↓] Navigate", "[Enter] Next Step", "[Ctrl+S] Verify Signature", "[Esc] Back", "[Ctrl+C] Quit"}
 	case viewSkipRound:
-		return []string{"[↑/↓] choose round", "[Enter] preview skip", "[Esc] back", "[Ctrl+C] quit"}
+		return []string{"[↑/↓] Choose Round", "[Enter] Confirm Bypass", "[Esc] Back", "[Ctrl+C] Quit"}
 	case viewScoreboard:
-		return []string{"[r] refresh", "[Esc] back", "[Ctrl+C] quit"}
+		return []string{"[↑/↓] Scroll Standings", "[r] Refresh", "[Esc] Back to Deck", "[Ctrl+C] Quit"}
 	case viewTeamStatus:
-		return []string{"[↑/↓] scroll", "[r] refresh", "[Esc] back", "[Ctrl+C] quit"}
+		return []string{"[↑/↓] Scroll Dossier", "[r] Refresh", "[Esc] Back to Deck", "[Ctrl+C] Quit"}
 	}
 	return nil
 }
 
 // View renders header + active view + notification + footer.
 func (m RootModel) View() string {
-	header := components.Header(m.team, m.currentScore(), m.width)
+	header := components.Header(m.team, m.currentScore(), m.viewName(), m.width)
 	footer := components.Footer(m.footerBindings(), m.width)
 
 	var body string
@@ -250,7 +273,11 @@ func (m RootModel) View() string {
 	// stays pinned at the bottom of the terminal.
 	headerH := lipgloss.Height(header)
 	footerH := lipgloss.Height(footer)
-	bodyH := m.height - headerH - footerH - 1 // reserve one line for notifications
+	notifH := 0
+	if m.notification.Visible() {
+		notifH = 2
+	}
+	bodyH := m.height - headerH - footerH - notifH
 	if bodyH < 1 {
 		bodyH = 1
 	}
@@ -260,9 +287,8 @@ func (m RootModel) View() string {
 
 	if notif := m.notification.View(m.width); notif != "" {
 		out = strings.TrimRight(out, " \n") + "\n" + notif
-	} else {
-		out += "\n" + strings.Repeat(" ", m.width)
 	}
 	out = lipgloss.JoinVertical(lipgloss.Left, out, footer)
 	return out
 }
+

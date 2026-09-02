@@ -3,6 +3,7 @@ package views
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -27,12 +28,74 @@ type roundItem struct {
 	id     int
 	title  string
 	desc   string
+	points int
+	solved bool
+	skip   bool
 	open   bool
 }
 
 func (i roundItem) Title() string       { return i.title }
 func (i roundItem) Description() string { return i.desc }
 func (i roundItem) FilterValue() string { return i.title }
+
+type flagRoundDelegate struct {
+	width int
+}
+
+func (d flagRoundDelegate) Height() int                             { return 2 }
+func (d flagRoundDelegate) Spacing() int                            { return 1 }
+func (d flagRoundDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d flagRoundDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	it, ok := listItem.(roundItem)
+	if !ok {
+		return
+	}
+
+	selected := index == m.Index()
+	maxWidth := d.width - 4
+	if maxWidth < 20 {
+		maxWidth = 20
+	}
+
+	var badge string
+	switch {
+	case it.solved:
+		badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#10B981")).Padding(0, 1).Render("✓ SOLVED")
+	case it.skip:
+		badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#EF4444")).Padding(0, 1).Render("✗ SKIPPED")
+	default:
+		badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#00B4D8")).Padding(0, 1).Render("⚡ OPEN")
+	}
+
+	pointsBadge := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FBBF24")).
+		Background(lipgloss.Color("#1E293B")).Padding(0, 1).Render(fmt.Sprintf("+%d PTS", it.points))
+
+	var prefix, titleStyled, descStyled string
+	availTitleW := maxWidth - 20
+	if availTitleW < 10 {
+		availTitleW = 10
+	}
+
+	if selected {
+		prefix = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00B4D8")).Render("▸ ")
+		titleStyled = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F8FAFC")).
+			Background(lipgloss.Color("#1E293B")).Padding(0, 1).Render(Truncate(it.title, availTitleW))
+		descStyled = lipgloss.NewStyle().Foreground(lipgloss.Color("#00B4D8")).Render("    " + Truncate(it.desc, maxWidth-6))
+	} else {
+		prefix = "  "
+		titleStyled = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#E2E8F0")).Render(Truncate(it.title, availTitleW))
+		descStyled = lipgloss.NewStyle().Foreground(lipgloss.Color("#64748B")).Render("    " + Truncate(it.desc, maxWidth-6))
+	}
+
+	row1 := prefix + badge + " " + titleStyled + "  " + pointsBadge
+	row2 := descStyled
+
+	fmt.Fprintf(w, "%s\n%s", row1, row2)
+}
 
 // SubmitFlagModel lets the player pick a round and submit a flag.
 type SubmitFlagModel struct {
@@ -49,15 +112,24 @@ type SubmitFlagModel struct {
 
 // NewSubmitFlag builds the flag submission view.
 func NewSubmitFlag(svc *scoring.Service, team *models.Team) SubmitFlagModel {
-	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
-	l.Title = "Select Round"
+	l := list.New([]list.Item{}, flagRoundDelegate{width: 54}, 0, 0)
+	l.Title = "SELECT TARGET CHALLENGE"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
+	l.SetShowHelp(false)
+	l.Styles.Title = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#0B0F19")).
+		Background(lipgloss.Color("#00B4D8")).
+		Padding(0, 1)
 
 	input := textinput.New()
 	input.Placeholder = "IEEE{...}"
 	input.CharLimit = 256
-	input.Prompt = "flag> "
+	input.Prompt = "❯ ENTER FLAG: "
+	input.PromptStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00B4D8"))
+	input.TextStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F8FAFC"))
+	input.PlaceholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#475569"))
 
 	return SubmitFlagModel{list: l, input: input, svc: svc, team: team}
 }
@@ -65,10 +137,32 @@ func NewSubmitFlag(svc *scoring.Service, team *models.Team) SubmitFlagModel {
 // SetSize implements sizing.
 func (m *SubmitFlagModel) SetSize(w, h int) {
 	m.width, m.height = w, h
-	m.list.SetSize(w-4, h-8)
-	inputWidth := 60
-	if w > 12 {
-		inputWidth = w - 12
+
+	// Apply Rule #4 (Weights, Not Pixels):
+	availableW := w - 6
+	listW := availableW
+	if w >= 90 {
+		listW = (availableW * 5) / 9
+	}
+	if listW < 30 {
+		listW = 30
+	}
+
+	// Apply Rule #1 (Borders accounting):
+	listH := h - 8
+	if listH < 6 {
+		listH = 6
+	}
+
+	m.list.SetDelegate(flagRoundDelegate{width: listW})
+	m.list.SetSize(listW, listH)
+
+	inputWidth := 50
+	if w > 16 {
+		inputWidth = w - 16
+		if inputWidth > 64 {
+			inputWidth = 64
+		}
 	}
 	m.input.Width = inputWidth
 }
@@ -83,17 +177,22 @@ func (m *SubmitFlagModel) Refresh() tea.Cmd {
 	for _, r := range rounds {
 		solved, _ := m.svc.DB.HasSolvedRound(m.team.ID, r.ID)
 		skipped, _ := m.svc.DB.HasSkipped(m.team.ID, r.ID)
-		status := lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280")).Render("open")
+
+		desc := "Available for flag submission"
 		if solved {
-			status = lipgloss.NewStyle().Foreground(lipgloss.Color("#00C853")).Render("solved ✓")
+			desc = "Solved by your team — bounty secured"
 		} else if skipped {
-			status = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5252")).Render("skipped ✗")
+			desc = "Bypassed via strategic skip — locked"
 		}
+
 		items = append(items, roundItem{
-			id:    r.ID,
-			title: fmt.Sprintf("Round %d — %s (%d pts)", r.ID, r.Name, r.Points),
-			desc:  "status: " + status,
-			open:  !solved && !skipped,
+			id:     r.ID,
+			title:  fmt.Sprintf("Round %d — %s", r.ID, r.Name),
+			desc:   desc,
+			points: r.Points,
+			solved: solved,
+			skip:   skipped,
+			open:   !solved && !skipped,
 		})
 	}
 	cmd := m.list.SetItems(items)
@@ -126,7 +225,7 @@ func (m SubmitFlagModel) Update(msg_ tea.Msg) (SubmitFlagModel, tea.Cmd) {
 					}
 					if !it.open {
 						flash := func() tea.Msg {
-							return msg.StatusFlash{Text: "That round is closed for you (solved or skipped).", Success: false}
+							return msg.StatusFlash{Text: "That round is closed (already solved or skipped).", Success: false}
 						}
 						return m, flash
 					}
@@ -174,17 +273,17 @@ func (m *SubmitFlagModel) submit() tea.Cmd {
 		text := "Submission failed."
 		switch {
 		case errors.Is(err, scoring.ErrRateLimited):
-			text = "Too many submissions — slow down."
+			text = "Rate limited: too many attempts. Please wait."
 		case errors.Is(err, store.ErrAlreadySolved):
-			text = "Already solved this round!"
+			text = "Round is already solved!"
 		case errors.Is(err, scoring.ErrAlreadySkipped):
-			text = "Round was already skipped."
+			text = "Round was skipped."
 		case errors.Is(err, scoring.ErrRoundInactive):
-			text = "Round is not active."
+			text = "Round is inactive."
 		case errors.Is(err, scoring.ErrFlagFormat):
-			text = "Invalid format. Flags look like IEEE{...}"
+			text = "Format invalid. Flags must match IEEE{...}"
 		case errors.Is(err, scoring.ErrFlagTooLong):
-			text = "Flag is too long."
+			text = "Flag token exceeds maximum length."
 		case strings.Contains(err.Error(), "cooldown"):
 			text = err.Error()
 		}
@@ -192,27 +291,135 @@ func (m *SubmitFlagModel) submit() tea.Cmd {
 		return flashErr
 	}
 	if !res.Correct {
-		flashWrong := func() tea.Msg { return msg.StatusFlash{Text: "Incorrect flag.", Success: false} }
+		flashWrong := func() tea.Msg { return msg.StatusFlash{Text: "Verification Failed: Incorrect Flag.", Success: false} }
 		return flashWrong
 	}
-	flashOK := func() tea.Msg { return msg.StatusFlash{Text: fmt.Sprintf("Correct! +%s points!", formatPoints(res.PointsAwarded)), Success: true} }
+	flashOK := func() tea.Msg {
+		return msg.StatusFlash{Text: fmt.Sprintf("FLAG ACCEPTED! +%s points awarded!", formatPoints(res.PointsAwarded)), Success: true}
+	}
 	nav := func() tea.Msg { return msg.Navigate{Target: msg.TDashboard} }
 	return tea.Sequence(flashOK, nav)
 }
 
 // View renders the phase-appropriate UI.
 func (m SubmitFlagModel) View() string {
-	var b strings.Builder
-	b.WriteString(lipgloss.NewStyle().Bold(true).Render("Submit Flag") + "\n\n")
-
-	if m.phase == submitSelectRound {
-		b.WriteString(m.list.View())
-	} else {
-		b.WriteString(fmt.Sprintf("Target: Round %d — %s (%d pts)\n\n", m.selected.ID, m.selected.Name, m.selected.Points))
-		b.WriteString(m.input.View() + "\n\n")
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280")).Render(
-			"Flags are case-sensitive and look like IEEE{...}. Attempts are rate-limited.") + "\n")
-		b.WriteString("[Enter] submit  [Esc] back")
+	w := m.width
+	if w < 40 {
+		w = 40
 	}
-	return lipgloss.NewStyle().Width(m.width).Padding(1, 2).Render(b.String())
+
+	var content string
+	if m.phase == submitSelectRound {
+		if w >= 95 {
+			hudW := w - m.list.Width() - 8
+			if hudW < 30 {
+				hudW = 30
+			}
+			hud := m.renderRoundBriefingHUD(hudW)
+			content = lipgloss.JoinHorizontal(lipgloss.Top, m.list.View(), "  ", hud)
+		} else {
+			content = m.list.View()
+		}
+	} else {
+		content = m.renderFlagInputTerminal()
+	}
+
+	return lipgloss.NewStyle().
+		Width(m.width).
+		Padding(1, 2).
+		Render(content)
 }
+
+func (m SubmitFlagModel) renderRoundBriefingHUD(width int) string {
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#0B0F19")).
+		Background(lipgloss.Color("#00F0FF")).
+		Padding(0, 1).
+		Render(" CHALLENGE DOSSIER ")
+
+	maxTextW := width - 4
+	if maxTextW < 10 {
+		maxTextW = 10
+	}
+
+	var detail strings.Builder
+	selected := m.list.SelectedItem()
+	if it, ok := selected.(roundItem); ok {
+		detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F0F6FC")).
+			Render("\nTarget: "+Truncate(it.title, maxTextW-10)) + "\n")
+		detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFD700")).
+			Render(fmt.Sprintf("Bounty: +%d Points\n\n", it.points)))
+		detail.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#00F0FF")).
+			Render("Status: "+Truncate(it.desc, maxTextW)) + "\n\n")
+	}
+
+	detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#58A6FF")).
+		Render("SUBMISSION ADVISORY:") + "\n")
+	detail.WriteString(Truncate("• Verify token string carefully", maxTextW) + "\n")
+	detail.WriteString(Truncate("• Submissions undergo cryptographic check", maxTextW) + "\n")
+	detail.WriteString(Truncate("• Excessive invalid attempts trigger cooldown", maxTextW) + "\n\n")
+
+	detail.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).
+		Render("Press [Enter] to open flag entry terminal"))
+
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#30363D")).
+		Background(lipgloss.Color("#161B22")).
+		Padding(0, 1).
+		Width(width).
+		Render(title + detail.String())
+}
+
+func (m SubmitFlagModel) renderFlagInputTerminal() string {
+	header := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#0B0F19")).
+		Background(lipgloss.Color("#00F0FF")).
+		Padding(0, 1).
+		Render(" FLAG INGESTION TERMINAL ")
+
+	targetInfo := fmt.Sprintf("\nTarget   : Round %d — %s\nBounty   : +%d PTS\nStatus   : ACTIVE CHALLENGE\n",
+		m.selected.ID, m.selected.Name, m.selected.Points)
+
+	targetStyled := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#F0F6FC")).
+		Render(targetInfo)
+
+	inputCard := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#00F0FF")).
+		Background(lipgloss.Color("#0D1117")).
+		Padding(1, 2).
+		Render(m.input.View())
+
+	advisory := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#8B949E")).
+		Render("Token format: IEEE{...} • Case-sensitive • Rate-limited")
+
+	btnHelp := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#00FF9D")).
+		Render("[Enter] Validate & Submit Flag  ") +
+		lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).Render("•  [Esc] Cancel & Return")
+
+	box := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#30363D")).
+		Background(lipgloss.Color("#161B22")).
+		Padding(1, 3).
+		Render(lipgloss.JoinVertical(lipgloss.Left,
+			header,
+			targetStyled,
+			inputCard,
+			"",
+			advisory,
+			"",
+			btnHelp,
+		))
+
+	return box
+}
+
