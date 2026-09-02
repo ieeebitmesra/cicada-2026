@@ -204,13 +204,10 @@ func TestRegisterModel(t *testing.T) {
 	}
 
 	// Validation checks
-	if err := validateRegistration("short", "short", "key"); err == nil {
+	if err := validateRegistration("short", "short"); err == nil {
 		t.Errorf("expected error on short password")
 	}
-	if err := validateRegistration("password123", "mismatch123", "key"); err == nil {
+	if err := validateRegistration("password123", "mismatch123"); err == nil {
 		t.Errorf("expected error on password mismatch")
-	}
-	if err := validateRegistration("password123", "password123", "not a pgp key"); err == nil {
-		t.Errorf("expected error on non-PGP key")
 	}
 }
