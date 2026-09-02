@@ -60,13 +60,13 @@ func (m WelcomeModel) View() string {
 			Foreground(lipgloss.Color("#F0F6FC")).
 			Background(lipgloss.Color("#00629B")).
 			Padding(0, 2).
-			Render(" ⬢ CICADA 2026 // IEEE CYBER-RANGE ")
+			Render(" ⬢ CICADA 2026 // PANTHEON CYBER-RANGE ")
 	}
 
 	subHeader := lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("#00F0FF")).
-		Render(Truncate("⚡ IEEE CYBER RANGE // SECURE ATTACK & DEFENSE ARENA ⚡", w-4))
+		Render(Truncate("⚡ PANTHEON CYBER RANGE // SECURE ATTACK & DEFENSE ARENA ⚡", w-4))
 
 	// Card 1: Mission Briefing
 	c1Title := lipgloss.NewStyle().
@@ -93,14 +93,14 @@ func (m WelcomeModel) View() string {
 
 	var c2Body strings.Builder
 	c2Body.WriteString("\n• Solved Round : ")
-	c2Body.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF9D")).Render("+100% Points bounty\n"))
+	c2Body.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF9D")).Render("+100% Points bounty") + "\n")
 	c2Body.WriteString("• Plain Hint   : ")
-	c2Body.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFB800")).Render("−20% of round point value\n"))
+	c2Body.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFB800")).Render("−20% of round point value") + "\n")
 	c2Body.WriteString("• Encoded Hint : ")
-	c2Body.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00F0FF")).Render("−10% of round point value (decode it)\n"))
+	c2Body.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00F0FF")).Render("−10% of round point value (decode it)") + "\n")
 	c2Body.WriteString("• Skip Round   : ")
-	c2Body.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF3860")).Render("−50% penalty (permanent forfeiture)\n"))
-	c2Body.WriteString("• Integrity    : Hint requests require local PGP clearsign verification.\n")
+	c2Body.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF3860")).Render("−50% penalty (permanent forfeiture)") + "\n")
+	c2Body.WriteString("• Integrity    : Actions require local password verification.\n")
 
 	// Determine layout based on terminal width (Rule #4)
 	var cardsView string

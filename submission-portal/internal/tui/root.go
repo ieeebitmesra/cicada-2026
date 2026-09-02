@@ -288,7 +288,12 @@ func (m RootModel) View() string {
 	if notif := m.notification.View(m.width); notif != "" {
 		out = strings.TrimRight(out, " \n") + "\n" + notif
 	}
-	out = lipgloss.JoinVertical(lipgloss.Left, out, footer)
-	return out
+	// Force global dark background to fix light theme terminal bleeding
+	return lipgloss.NewStyle().
+		Background(ColorBgDark).
+		Foreground(ColorText).
+		Width(m.width).
+		Height(m.height).
+		Render(out)
 }
 
