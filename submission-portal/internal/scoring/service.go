@@ -161,6 +161,32 @@ func (s *Service) RedeemHint(team *models.Team, roundID int, hintType string, si
 	return text, cost, nil
 }
 
+// DirectRedeemHint dispenses a hint after password-based confirmation (no PGP).
+func (s *Service) DirectRedeemHint(team *models.Team, roundID int, hintType string) (text string, cost float64, err error) {
+	// Validate round is active in database
+	dbRound, err := s.DB.GetRound(roundID)
+	if err != nil || !dbRound.IsActive {
+		return "", 0, ErrRoundInactive
+	}
+
+	index, err := s.NextHintIndex(team.ID, roundID, hintType)
+	if err != nil {
+		return "", 0, err
+	}
+
+	text, ok := s.Rounds.Hint(roundID, hintType, index)
+	if !ok {
+		return "", 0, ErrNoHintsLeft
+	}
+
+	round := s.Rounds.Def(roundID)
+	cost = HintCost(round.Points, hintType)
+	if _, err := s.DB.RecordHintUsage(team.ID, roundID, hintType, index, "password-confirmed", cost); err != nil {
+		return "", 0, err
+	}
+	return text, cost, nil
+}
+
 // PreviewSkipCost computes what skipping a round would cost right now.
 func (s *Service) PreviewSkipCost(teamID int64, roundID int) (float64, error) {
 	round := s.Rounds.Def(roundID)
