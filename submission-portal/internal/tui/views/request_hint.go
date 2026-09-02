@@ -127,6 +127,7 @@ func NewRequestHint(svc *scoring.Service, team *models.Team) RequestHintModel {
 	passInp.Prompt = "❯ "
 	passInp.PromptStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00B4D8"))
 	passInp.TextStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F8FAFC"))
+	passInp.PlaceholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#475569"))
 
 	return RequestHintModel{list: l, typ: t, passInp: passInp, svc: svc, team: team}
 }

@@ -30,7 +30,7 @@ func Header(team *models.Team, score string, viewName string, width int) string 
 		Foreground(lipgloss.Color("#F0F6FC")).
 		Background(lipgloss.Color("#00629B")).
 		Padding(0, 1).
-		Render("⬢ IEEE CTF")
+		Render("⬢ PANTHEON CTF")
 
 	// Breadcrumb / View Name
 	var breadcrumb string

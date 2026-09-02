@@ -123,6 +123,7 @@ func NewSkipRound(svc *scoring.Service, team *models.Team) SkipRoundModel {
 	passInp.Prompt = "❯ "
 	passInp.PromptStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF3860"))
 	passInp.TextStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F8FAFC"))
+	passInp.PlaceholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#475569"))
 
 	return SkipRoundModel{
 		phase:   skipPhaseSelect,
