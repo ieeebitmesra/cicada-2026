@@ -42,20 +42,57 @@ func (n *Notification) Handle(m tea.Msg) bool {
 // Visible reports whether a message is showing.
 func (n *Notification) Visible() bool { return n.visible }
 
-// View renders the flash message.
+// View renders the flash message as a tactical HUD toast.
 func (n *Notification) View(width int) string {
 	if !n.visible {
 		return ""
 	}
-	style := lipgloss.NewStyle().Bold(true).Padding(0, 1)
+	if width < 30 {
+		width = 30
+	}
+
+	var badge, borderCol, bgCol string
 	if n.success {
-		style = style.Foreground(lipgloss.Color("#003300")).Background(lipgloss.Color("#00C853"))
+		badge = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#00FF9D")).
+			Padding(0, 1).
+			Render("✔ SUCCESS")
+		borderCol = "#00FF9D"
+		bgCol = "#064E3B"
 	} else {
-		style = style.Foreground(lipgloss.Color("#330000")).Background(lipgloss.Color("#FF5252"))
+		badge = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#FF3860")).
+			Padding(0, 1).
+			Render("✖ ALERT")
+		borderCol = "#FF3860"
+		bgCol = "#450A1A"
 	}
-	text := n.text
-	if w := lipgloss.Width(text); w < width {
-		text += strings.Repeat(" ", width-w)
+
+	content := badge + "  " + lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#F0F6FC")).
+		Render(n.text)
+
+	card := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color(borderCol)).
+		Background(lipgloss.Color(bgCol)).
+		Padding(0, 2).
+		Render(content)
+
+	// Center or pad nicely
+	cardW := lipgloss.Width(card)
+	if cardW < width {
+		pad := (width - cardW) / 2
+		if pad < 1 {
+			pad = 1
+		}
+		return strings.Repeat(" ", pad) + card
 	}
-	return style.Render(text)
+	return card
 }
+

@@ -46,24 +46,22 @@ func ParsePublicKey(armored string) (*openpgp.Entity, error) {
 	}
 	return keys[0], nil
 }
+// PublicKeyID returns the 16-hex key ID (e.g. "0x1234567890ABCDEF") for gpg CLI commands.
+func PublicKeyID(armored string) string {
+	e, err := ParsePublicKey(armored)
+	if err != nil || e == nil || e.PrimaryKey == nil {
+		return ""
+	}
+	return fmt.Sprintf("0x%016X", e.PrimaryKey.KeyId)
+}
+
+// PublicKeyFingerprint returns a clean 16-hex key identifier for UI displays.
 func PublicKeyFingerprint(armored string) string {
 	e, err := ParsePublicKey(armored)
-	if err != nil {
+	if err != nil || e == nil || e.PrimaryKey == nil {
 		return "(none)"
 	}
-	fp := fmt.Sprintf("%X", e.PrimaryKey.Fingerprint)
-	if len(fp) > 16 {
-		fp = fp[len(fp)-16:]
-	}
-	grouped := make([]string, 0, 4)
-	for i := 0; i < len(fp); i += 4 {
-		end := i + 4
-		if end > len(fp) {
-			end = len(fp)
-		}
-		grouped = append(grouped, fp[i:end])
-	}
-	return strings.Join(grouped, " ")
+	return fmt.Sprintf("%016X", e.PrimaryKey.KeyId)
 }
 
 // VerifyClearsign verifies an armored clearsigned message against the team's

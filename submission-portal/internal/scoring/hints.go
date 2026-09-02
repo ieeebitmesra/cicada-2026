@@ -64,6 +64,37 @@ func VerifyHintChallenge(body string, team *models.Team, roundID int, hintType s
 	return nil
 }
 
+// BuildSkipChallenge creates the string the player must clearsign to bypass a round.
+func BuildSkipChallenge(team *models.Team, roundID int, nonce string, now time.Time) string {
+	return fmt.Sprintf("SKIP-REQ\nround=%d\nnonce=%s\nts=%s\nteam=%s",
+		roundID, nonce, now.UTC().Format(time.RFC3339), team.SSHUser)
+}
+
+// VerifySkipChallenge validates a signed skip challenge body against expectations.
+func VerifySkipChallenge(body string, team *models.Team, roundID int, validity time.Duration) error {
+	fields := ParseSkipChallenge(body)
+	if fields == nil {
+		return ErrBadChallenge
+	}
+	if fields["team"] != team.SSHUser {
+		return ErrBadChallenge
+	}
+	if fields["round"] != strconv.Itoa(roundID) {
+		return ErrBadChallenge
+	}
+	if fields["nonce"] == "" {
+		return ErrBadChallenge
+	}
+	ts, err := time.Parse(time.RFC3339, fields["ts"])
+	if err != nil {
+		return ErrBadChallenge
+	}
+	if d := time.Since(ts); d > validity || d < -validity {
+		return ErrChallengeStale
+	}
+	return nil
+}
+
 // ParseChallenge parses "k=v" lines into a map; returns nil on malformed input.
 func ParseChallenge(body string) map[string]string {
 	out := make(map[string]string)
@@ -82,6 +113,29 @@ func ParseChallenge(body string) map[string]string {
 		out[strings.TrimSpace(k)] = strings.TrimSpace(v)
 	}
 	if len(out) < 5 { // round, type, index, nonce, ts, team — marker excluded
+		return nil
+	}
+	return out
+}
+
+// ParseSkipChallenge parses "k=v" lines into a map; returns nil on malformed input.
+func ParseSkipChallenge(body string) map[string]string {
+	out := make(map[string]string)
+	for _, line := range strings.Split(strings.TrimSpace(body), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if line == "SKIP-REQ" { // marker line
+			continue
+		}
+		k, v, ok := strings.Cut(line, "=")
+		if !ok || k == "" || v == "" {
+			return nil
+		}
+		out[strings.TrimSpace(k)] = strings.TrimSpace(v)
+	}
+	if len(out) < 4 { // round, nonce, ts, team
 		return nil
 	}
 	return out

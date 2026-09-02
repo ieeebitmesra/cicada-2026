@@ -3,6 +3,7 @@ package views
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -28,11 +29,50 @@ const (
 type hintTypeItem struct {
 	typ  string // "plain" | "encoded"
 	cost string
+	desc string
 }
 
-func (i hintTypeItem) Title() string       { return i.typ + " hint — cost " + i.cost }
-func (i hintTypeItem) Description() string { return "" }
+func (i hintTypeItem) Title() string       { return i.typ + " hint — " + i.cost }
+func (i hintTypeItem) Description() string { return i.desc }
 func (i hintTypeItem) FilterValue() string { return i.typ }
+
+type hintTypeDelegate struct {
+	width int
+}
+
+func (d hintTypeDelegate) Height() int                             { return 2 }
+func (d hintTypeDelegate) Spacing() int                            { return 1 }
+func (d hintTypeDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d hintTypeDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	it, ok := listItem.(hintTypeItem)
+	if !ok {
+		return
+	}
+
+	selected := index == m.Index()
+
+	badgeColor := "#00B4D8"
+	if it.typ == "plain" {
+		badgeColor = "#F59E0B"
+	}
+	badge := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+		Background(lipgloss.Color(badgeColor)).Padding(0, 1).Render(strings.ToUpper(it.typ))
+
+	costBadge := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F8FAFC")).
+		Background(lipgloss.Color("#1E293B")).Padding(0, 1).Render(it.cost)
+
+	var prefix, descStyled string
+	if selected {
+		prefix = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00B4D8")).Render("▸ ")
+		descStyled = lipgloss.NewStyle().Foreground(lipgloss.Color("#00B4D8")).Render("    " + it.desc)
+	} else {
+		prefix = "  "
+		descStyled = lipgloss.NewStyle().Foreground(lipgloss.Color("#64748B")).Render("    " + it.desc)
+	}
+
+	fmt.Fprintf(w, "%s%s  %s\n%s", prefix, badge, costBadge, descStyled)
+}
 
 // RequestHintModel walks the PGP-signed hint request flow.
 type RequestHintModel struct {
@@ -55,24 +95,39 @@ type RequestHintModel struct {
 
 // NewRequestHint builds the hint flow view.
 func NewRequestHint(svc *scoring.Service, team *models.Team) RequestHintModel {
-	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
-	l.Title = "Request Hint — select round"
+	l := list.New([]list.Item{}, flagRoundDelegate{}, 0, 0)
+	l.Title = "SELECT TARGET CHALLENGE FOR INTEL"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
+	l.SetShowHelp(false)
+	l.Styles.Title = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#0B0F19")).
+		Background(lipgloss.Color("#00B4D8")).
+		Padding(0, 1)
 
 	t := list.New([]list.Item{
-		hintTypeItem{"plain", "20% of round"},
-		hintTypeItem{"encoded", "10% of round (you decode it)"},
-	}, list.NewDefaultDelegate(), 0, 0)
-	t.Title = "Select hint type"
+		hintTypeItem{"plain", "Cost: 20% of round value", "Direct plain text clue • Immediate tactical advantage"},
+		hintTypeItem{"encoded", "Cost: 10% of round value", "Encrypted / algorithmic puzzle clue • Lower penalty"},
+	}, hintTypeDelegate{width: 54}, 0, 0)
+	t.Title = "SELECT INTEL CLEARANCE TYPE"
 	t.SetShowStatusBar(false)
 	t.SetFilteringEnabled(false)
 	t.SetShowHelp(false)
+	t.Styles.Title = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#0B0F19")).
+		Background(lipgloss.Color("#F59E0B")).
+		Padding(0, 1)
 
 	paste := textarea.New()
-	paste.Placeholder = "-----BEGIN PGP SIGNED MESSAGE-----\n...\n-----END PGP SIGNATURE-----"
+	paste.Placeholder = "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n...\n-----BEGIN PGP SIGNATURE-----\n...\n-----END PGP SIGNATURE-----"
 	paste.CharLimit = 8192
 	paste.ShowLineNumbers = false
+	paste.FocusedStyle.Base = lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#00B4D8")).
+		Background(lipgloss.Color("#0B0F19"))
 
 	return RequestHintModel{list: l, typ: t, paste: paste, svc: svc, team: team}
 }
@@ -80,12 +135,23 @@ func NewRequestHint(svc *scoring.Service, team *models.Team) RequestHintModel {
 // SetSize implements sizing.
 func (m *RequestHintModel) SetSize(w, h int) {
 	m.width, m.height = w, h
-	m.list.SetSize(w-4, h-8)
-	m.typ.SetSize(w-4, h-8)
-	if w > 10 {
-		m.paste.SetWidth(w - 10)
+	listW := w - 4
+	listH := h - 8
+	if listH < 6 {
+		listH = 6
 	}
-	m.paste.SetHeight(h / 3)
+	m.list.SetDelegate(flagRoundDelegate{width: listW})
+	m.list.SetSize(listW, listH)
+	m.typ.SetDelegate(hintTypeDelegate{width: listW})
+	m.typ.SetSize(listW, listH)
+	if w > 10 {
+		m.paste.SetWidth(w - 12)
+	}
+	pH := h / 3
+	if pH < 5 {
+		pH = 5
+	}
+	m.paste.SetHeight(pH)
 }
 
 // Refresh resets to round selection.
@@ -100,12 +166,27 @@ func (m *RequestHintModel) Refresh() tea.Cmd {
 		if solved {
 			continue
 		}
+		skipped, _ := m.svc.DB.HasSkipped(m.team.ID, r.ID)
+		if skipped {
+			continue
+		}
+
+		plainLeft := m.svc.Rounds.CountHints(r.ID, "plain")
+		encLeft := m.svc.Rounds.CountHints(r.ID, "encoded")
+		usedP, _ := m.svc.DB.CountHintsUsed(m.team.ID, r.ID, "plain")
+		usedE, _ := m.svc.DB.CountHintsUsed(m.team.ID, r.ID, "encoded")
+
+		desc := fmt.Sprintf("Hints remaining: plain %d/%d • encoded %d/%d",
+			max0(plainLeft-usedP), plainLeft, max0(encLeft-usedE), encLeft)
+
 		items = append(items, roundItem{
-			id:    r.ID,
-			title: fmt.Sprintf("Round %d — %s (%d pts)", r.ID, r.Name, r.Points),
-			desc:  fmt.Sprintf("hints available: plain ×%d • encoded ×%d",
-				m.svc.Rounds.CountHints(r.ID, "plain"), m.svc.Rounds.CountHints(r.ID, "encoded")),
-			open: true,
+			id:     r.ID,
+			title:  fmt.Sprintf("Round %d — %s", r.ID, r.Name),
+			desc:   desc,
+			points: r.Points,
+			solved: false,
+			skip:   false,
+			open:   true,
 		})
 	}
 	cmd := m.list.SetItems(items)
@@ -233,54 +314,266 @@ func (m *RequestHintModel) redeem() tea.Cmd {
 	m.cost = cost
 	m.phase = hintDone
 	flashOK := func() tea.Msg {
-		return msg.StatusFlash{Text: fmt.Sprintf("Hint dispensed (−%s pts).", formatPoints(m.cost)), Success: true}
+		return msg.StatusFlash{Text: fmt.Sprintf("INTEL DISPENSED! (−%s pts).", formatPoints(m.cost)), Success: true}
 	}
 	return flashOK
 }
 
+func (m RequestHintModel) renderWizardBar() string {
+	steps := []struct {
+		id    hintPhase
+		label string
+	}{
+		{hintSelectRound, "1. SELECT ROUND"},
+		{hintSelectType, "2. HINT TYPE"},
+		{hintSign, "3. PGP CLEARSIGN"},
+		{hintDone, "4. UNLOCKED INTEL"},
+	}
+
+	var parts []string
+	for _, s := range steps {
+		if s.id == m.phase {
+			// Current active
+			parts = append(parts, lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("#0B0F19")).
+				Background(lipgloss.Color("#00F0FF")).
+				Padding(0, 1).
+				Render("► "+s.label))
+		} else if s.id < m.phase {
+			// Completed
+			parts = append(parts, lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("#00FF9D")).
+				Background(lipgloss.Color("#161B22")).
+				Padding(0, 1).
+				Render("✓ "+s.label))
+		} else {
+			// Future
+			parts = append(parts, lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#8B949E")).
+				Background(lipgloss.Color("#161B22")).
+				Padding(0, 1).
+				Render("  "+s.label))
+		}
+	}
+
+	sep := lipgloss.NewStyle().Foreground(lipgloss.Color("#30363D")).Render(" ❯ ")
+	return strings.Join(parts, sep)
+}
+
 // View renders the current phase.
 func (m RequestHintModel) View() string {
-	var b strings.Builder
-	b.WriteString(lipgloss.NewStyle().Bold(true).Render("Request Hint") + "\n\n")
+	w := m.width
+	if w < 40 {
+		w = 40
+	}
 
+	wizard := m.renderWizardBar()
+
+	var body string
 	switch m.phase {
 	case hintSelectRound:
-		b.WriteString(m.list.View())
+		body = m.list.View()
 
 	case hintSelectType:
-		b.WriteString(fmt.Sprintf("Round %d — %s\n", m.selected.ID, m.selected.Name))
+		var b strings.Builder
 		plainLeft := m.svc.Rounds.CountHints(m.selected.ID, "plain")
 		encLeft := m.svc.Rounds.CountHints(m.selected.ID, "encoded")
 		usedP, _ := m.svc.DB.CountHintsUsed(m.team.ID, m.selected.ID, "plain")
 		usedE, _ := m.svc.DB.CountHintsUsed(m.team.ID, m.selected.ID, "encoded")
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280")).
-			Render(fmt.Sprintf("remaining: plain %d/%d • encoded %d/%d\n\n",
-				max0(plainLeft-usedP), plainLeft, max0(encLeft-usedE), encLeft)))
-		b.WriteString(m.typ.View() + "\n")
-		b.WriteString("[↑/↓] choose  [Enter] next  [Esc] back")
+
+		targetCard := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#30363D")).
+			Background(lipgloss.Color("#161B22")).
+			Padding(0, 1).
+			Render(fmt.Sprintf("Target: Round %d — %s (%d pts)  •  Inventory: Plain %d/%d  Encoded %d/%d",
+				m.selected.ID, m.selected.Name, m.selected.Points,
+				max0(plainLeft-usedP), plainLeft, max0(encLeft-usedE), encLeft))
+
+		b.WriteString(targetCard + "\n\n")
+		b.WriteString(m.typ.View() + "\n\n")
+		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).
+			Render("[↑/↓] Choose Type  •  [Enter] Issue PGP Nonce  •  [Esc] Back to Rounds"))
+		body = b.String()
 
 	case hintSign:
-		fp := auth.PublicKeyFingerprint(m.team.PGPPubkey)
-		b.WriteString("Step 1 — clearsign this challenge locally:\n\n")
-		b.WriteString(lipgloss.NewStyle().
-			Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#FFB300")).
-			Padding(0, 1).
-			Render(m.challenge) + "\n\n")
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280")).
-			Render(fmt.Sprintf("  $ gpg --clearsign --local-user ...%s\n", fp)) + "\n")
-		b.WriteString("Step 2 — paste the signed message below, then press Ctrl+S:\n\n")
-		b.WriteString(m.paste.View())
+		var b strings.Builder
+		keyID := auth.PublicKeyID(m.team.PGPPubkey)
+		gpgCmd := "gpg --clearsign"
+		if keyID != "" {
+			gpgCmd = fmt.Sprintf("gpg --clearsign -u %s", keyID)
+		}
 
-	default:
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#00C853")).Bold(true).
-			Render(fmt.Sprintf("Hint (%s, −%s pts):", m.typeSel, formatPoints(m.cost))) + "\n\n")
-		box := lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#00C853")).
+		availW := w - 8
+
+		// Step 1: Challenge Nonce Box
+		nonceHeader := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#FFB800")).Padding(0, 1).Render("STEP 1: NONCE CHALLENGE")
+
+		// Step 2: Pasted Signature Box
+		inputHeader := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#00F0FF")).Padding(0, 1).Render("STEP 2: PASTE SIGNED MESSAGE")
+
+		if w >= 90 {
+			// Dual Pane 1:1 proportional layout (Golden Rule #4)
+			paneW := (availW - 2) / 2
+			if paneW < 38 {
+				paneW = 38
+			}
+			m.paste.SetWidth(paneW - 4)
+			m.paste.SetHeight(10)
+
+			tokenBox := lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("#30363D")).
+				Background(lipgloss.Color("#0D1117")).
+				Foreground(lipgloss.Color("#00FF9D")).
+				Bold(true).
+				Padding(0, 1).
+				Width(paneW - 6).
+				Render(m.challenge)
+
+			cmdBox := lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("#30363D")).
+				Background(lipgloss.Color("#0D1117")).
+				Foreground(lipgloss.Color("#00F0FF")).
+				Bold(true).
+				Padding(0, 1).
+				Width(paneW - 6).
+				Render(fmt.Sprintf("$ %s", gpgCmd))
+
+			eofGuide := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#C9D1D9")).
+				Render("• Paste token into stdin, then send EOF:\n  Linux/macOS: [Ctrl+D]\n  Windows:     [Ctrl+Z] then [Enter]")
+
+			fileTip := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#8B949E")).
+				Render(fmt.Sprintf("• Or save to hint.txt and run:\n  $ %s hint.txt", gpgCmd))
+
+			nonceContent := lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(lipgloss.Color("#FFB800")).
+				Background(lipgloss.Color("#161B22")).
+				Padding(1, 2).
+				Width(paneW).
+				Render(lipgloss.JoinVertical(lipgloss.Left,
+					nonceHeader,
+					"",
+					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#58A6FF")).Render("1. Nonce Challenge Token:"),
+					tokenBox,
+					"",
+					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#58A6FF")).Render("2. Run in terminal:"),
+					cmdBox,
+					"",
+					eofGuide,
+					"",
+					fileTip,
+				))
+
+			inputCard := lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(lipgloss.Color("#00F0FF")).
+				Background(lipgloss.Color("#161B22")).
+				Padding(1, 2).
+				Width(paneW).
+				Render(lipgloss.JoinVertical(lipgloss.Left,
+					inputHeader,
+					"",
+					m.paste.View(),
+					"",
+					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF9D")).Render("[Ctrl+S] Verify Signature & Dispense Intel"),
+					lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).Render("[Esc] Return to Type Selection"),
+				))
+
+			b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, nonceContent, "  ", inputCard))
+		} else {
+			m.paste.SetWidth(availW - 4)
+			m.paste.SetHeight(5)
+
+			tokenBox := lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("#30363D")).
+				Background(lipgloss.Color("#0D1117")).
+				Foreground(lipgloss.Color("#00FF9D")).
+				Bold(true).
+				Padding(0, 1).
+				Render(m.challenge)
+
+			cmdBox := lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("#30363D")).
+				Background(lipgloss.Color("#0D1117")).
+				Foreground(lipgloss.Color("#00F0FF")).
+				Bold(true).
+				Padding(0, 1).
+				Render(fmt.Sprintf("$ %s", gpgCmd))
+
+			nonceContent := lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(lipgloss.Color("#FFB800")).
+				Background(lipgloss.Color("#161B22")).
+				Padding(1, 2).
+				Width(availW).
+				Render(lipgloss.JoinVertical(lipgloss.Left,
+					nonceHeader,
+					"",
+					tokenBox,
+					cmdBox,
+					lipgloss.NewStyle().Foreground(lipgloss.Color("#C9D1D9")).Render("Paste token, then press Ctrl+D (Unix) or Ctrl+Z+Enter (Windows)"),
+				))
+
+			inputCard := lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(lipgloss.Color("#00F0FF")).
+				Background(lipgloss.Color("#161B22")).
+				Padding(1, 2).
+				Width(availW).
+				Render(lipgloss.JoinVertical(lipgloss.Left,
+					inputHeader,
+					"",
+					m.paste.View(),
+					"",
+					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF9D")).Render("[Ctrl+S] Verify & Dispense  •  [Esc] Cancel"),
+				))
+
+			b.WriteString(lipgloss.JoinVertical(lipgloss.Left, nonceContent, "\n", inputCard))
+		}
+		body = b.String()
+
+	default: // hintDone
+		var b strings.Builder
+		unlockBanner := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#00FF9D")).
+			Padding(0, 2).
+			Render(fmt.Sprintf("🔓 TACTICAL INTEL UNLOCKED (%s, −%s PTS)", strings.ToUpper(m.typeSel), formatPoints(m.cost)))
+
+		intelBox := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#00FF9D")).
+			Background(lipgloss.Color("#0D1117")).
+			Foreground(lipgloss.Color("#F0F6FC")).
 			Padding(1, 2).
+			Width(w - 8).
 			Render(m.result)
-		b.WriteString(box + "\n\n[Enter] back to dashboard")
+
+		cta := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#00F0FF")).
+			Render("Press [Enter] to return to Command Deck")
+
+		b.WriteString(lipgloss.JoinVertical(lipgloss.Left, unlockBanner, "\n", intelBox, "\n", cta))
+		body = b.String()
 	}
-	return lipgloss.NewStyle().Width(m.width).Padding(1, 2).Render(b.String())
+
+	return lipgloss.NewStyle().
+		Width(m.width).
+		Padding(1, 2).
+		Render(lipgloss.JoinVertical(lipgloss.Left, wizard, "\n", body))
 }
 
 func max0(n int) int {
@@ -289,3 +582,4 @@ func max0(n int) int {
 	}
 	return n
 }
+
