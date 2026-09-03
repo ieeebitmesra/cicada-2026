@@ -181,7 +181,8 @@ func (s *Service) DirectRedeemHint(team *models.Team, roundID int, hintType stri
 
 	round := s.Rounds.Def(roundID)
 	cost = HintCost(round.Points, hintType)
-	if _, err := s.DB.RecordHintUsage(team.ID, roundID, hintType, index, "password-confirmed", cost); err != nil {
+	proof := fmt.Sprintf("password-confirmed-%d-%d-%s-%d-%d", team.ID, roundID, hintType, index, time.Now().UnixNano())
+	if _, err := s.DB.RecordHintUsage(team.ID, roundID, hintType, index, proof, cost); err != nil {
 		return "", 0, err
 	}
 	return text, cost, nil
