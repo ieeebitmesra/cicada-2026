@@ -73,8 +73,8 @@ func TestRootModelNavigationAndLifecycle(t *testing.T) {
 
 	// Test View rendering
 	v := m.View()
-	if !strings.Contains(v, "IEEE CTF") || !strings.Contains(v, "PORTAL ACCESS") {
-		t.Errorf("View missing header elements: %s", v)
+	if !strings.Contains(v, "PANTHEON CTF") || !strings.Contains(v, "PORTAL ACCESS") {
+		t.Errorf("Expected dashboard UI to contain PANTHEON CTF and PORTAL ACCESS, got:\n%s", v)
 	}
 
 	// Navigate to Dashboard

@@ -227,13 +227,13 @@ func (m RootModel) footerBindings() []string {
 	case viewWelcome:
 		return []string{"[Enter] Initialize Terminal", "[Ctrl+C] Quit"}
 	case viewRegister:
-		return []string{"[Tab] Next Field", "[Shift+Tab] Prev Field", "[Ctrl+S] Save Credentials", "[Ctrl+C] Quit"}
+		return []string{"[Tab] Next Field", "[Shift+Tab] Prev Field", "[Enter] Save Credentials", "[Ctrl+C] Quit"}
 	case viewDashboard:
 		return []string{"[↑/↓] Navigate Directives", "[Enter] Select", "[r] Refresh", "[Ctrl+C] Quit"}
 	case viewSubmitFlag:
 		return []string{"[↑/↓] Navigate", "[Enter] Select/Submit", "[Esc] Back", "[Ctrl+C] Quit"}
 	case viewRequestHint:
-		return []string{"[↑/↓] Navigate", "[Enter] Next Step", "[Ctrl+S] Verify Signature", "[Esc] Back", "[Ctrl+C] Quit"}
+		return []string{"[↑/↓] Navigate", "[Enter] Next Step", "[Esc] Back", "[Ctrl+C] Quit"}
 	case viewSkipRound:
 		return []string{"[↑/↓] Choose Round", "[Enter] Confirm Bypass", "[Esc] Back", "[Ctrl+C] Quit"}
 	case viewScoreboard:
@@ -288,7 +288,12 @@ func (m RootModel) View() string {
 	if notif := m.notification.View(m.width); notif != "" {
 		out = strings.TrimRight(out, " \n") + "\n" + notif
 	}
-	out = lipgloss.JoinVertical(lipgloss.Left, out, footer)
-	return out
+	// Force global dark background to fix light theme terminal bleeding
+	return lipgloss.NewStyle().
+		Background(ColorBgDark).
+		Foreground(ColorText).
+		Width(m.width).
+		Height(m.height).
+		Render(out)
 }
 
