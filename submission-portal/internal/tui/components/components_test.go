@@ -13,8 +13,8 @@ import (
 func TestHeader(t *testing.T) {
 	// 1. Nil team
 	h1 := Header(nil, "", "PORTAL ACCESS", 80)
-	if !strings.Contains(h1, "IEEE CTF") || !strings.Contains(h1, "PORTAL ACCESS") {
-		t.Errorf("Header with nil team missing brand/viewName: %s", h1)
+	if !strings.Contains(h1, "PANTHEON CTF") || !strings.Contains(h1, "PORTAL ACCESS") {
+		t.Errorf("Header missing expected components: %s", h1)
 	}
 
 	// 2. Team with score

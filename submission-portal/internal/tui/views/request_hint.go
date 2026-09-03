@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/textarea"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
@@ -22,7 +22,7 @@ type hintPhase int
 const (
 	hintSelectRound hintPhase = iota
 	hintSelectType
-	hintSign
+	hintConfirm
 	hintDone
 )
 
@@ -74,14 +74,14 @@ func (d hintTypeDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 	fmt.Fprintf(w, "%s%s  %s\n%s", prefix, badge, costBadge, descStyled)
 }
 
-// RequestHintModel walks the PGP-signed hint request flow.
+// RequestHintModel walks the password-confirmed hint request flow.
 type RequestHintModel struct {
 	width, height int
 	phase         hintPhase
 
-	list  list.Model
-	typ   list.Model
-	paste textarea.Model
+	list    list.Model
+	typ     list.Model
+	passInp textinput.Model
 
 	svc      *scoring.Service
 	team     *models.Team
@@ -89,8 +89,7 @@ type RequestHintModel struct {
 	typeSel  string
 	cost     float64
 
-	challenge string
-	result    string
+	result string
 }
 
 // NewRequestHint builds the hint flow view.
@@ -120,16 +119,17 @@ func NewRequestHint(svc *scoring.Service, team *models.Team) RequestHintModel {
 		Background(lipgloss.Color("#F59E0B")).
 		Padding(0, 1)
 
-	paste := textarea.New()
-	paste.Placeholder = "-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n...\n-----BEGIN PGP SIGNATURE-----\n...\n-----END PGP SIGNATURE-----"
-	paste.CharLimit = 8192
-	paste.ShowLineNumbers = false
-	paste.FocusedStyle.Base = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#00B4D8")).
-		Background(lipgloss.Color("#0B0F19"))
+	passInp := textinput.New()
+	passInp.Placeholder = "Enter your team password to confirm"
+	passInp.EchoMode = textinput.EchoPassword
+	passInp.CharLimit = 128
+	passInp.Width = 44
+	passInp.Prompt = "❯ "
+	passInp.PromptStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00B4D8"))
+	passInp.TextStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F8FAFC"))
+	passInp.PlaceholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#475569"))
 
-	return RequestHintModel{list: l, typ: t, paste: paste, svc: svc, team: team}
+	return RequestHintModel{list: l, typ: t, passInp: passInp, svc: svc, team: team}
 }
 
 // SetSize implements sizing.
@@ -144,14 +144,15 @@ func (m *RequestHintModel) SetSize(w, h int) {
 	m.list.SetSize(listW, listH)
 	m.typ.SetDelegate(hintTypeDelegate{width: listW})
 	m.typ.SetSize(listW, listH)
-	if w > 10 {
-		m.paste.SetWidth(w - 12)
+
+	inputWidth := 50
+	if w > 16 {
+		inputWidth = w - 16
+		if inputWidth > 64 {
+			inputWidth = 64
+		}
 	}
-	pH := h / 3
-	if pH < 5 {
-		pH = 5
-	}
-	m.paste.SetHeight(pH)
+	m.passInp.Width = inputWidth
 }
 
 // Refresh resets to round selection.
@@ -202,19 +203,16 @@ func (m RequestHintModel) Update(msg_ tea.Msg) (RequestHintModel, tea.Cmd) {
 			return m, tea.Quit
 		case "esc":
 			switch m.phase {
-			case hintSign:
+			case hintConfirm:
 				m.phase = hintSelectType
-				m.paste.Blur()
+				m.passInp.Blur()
+				m.passInp.SetValue("")
 				return m, nil
 			case hintSelectType:
 				m.phase = hintSelectRound
 				return m, nil
 			default:
 				return m, func() tea.Msg { return msg.Navigate{Target: msg.TDashboard} }
-			}
-		case "ctrl+s":
-			if m.phase == hintSign {
-				return m, m.redeem()
 			}
 		}
 	}
@@ -241,16 +239,64 @@ func (m RequestHintModel) Update(msg_ tea.Msg) (RequestHintModel, tea.Cmd) {
 		if key, ok := msg_.(tea.KeyMsg); ok && key.String() == "enter" {
 			if it, ok := m.typ.SelectedItem().(hintTypeItem); ok {
 				m.typeSel = it.typ
-				return m, m.issueChallenge()
+				// Calculate cost preview
+				round := m.svc.Rounds.Def(m.selected.ID)
+				if round != nil {
+					m.cost = scoring.HintCost(round.Points, m.typeSel)
+				}
+				m.phase = hintConfirm
+				m.passInp.SetValue("")
+				m.passInp.Focus()
+				return m, textinput.Blink
 			}
 		}
 		var cmd tea.Cmd
 		m.typ, cmd = m.typ.Update(msg_)
 		return m, cmd
 
-	case hintSign:
+	case hintConfirm:
+		if key, ok := msg_.(tea.KeyMsg); ok && (key.String() == "enter" || key.String() == "ctrl+s") {
+			password := m.passInp.Value()
+			if password == "" {
+				flashErr := func() tea.Msg {
+					return msg.StatusFlash{Text: "Enter your team password to confirm hint request.", Success: false}
+				}
+				return m, flashErr
+			}
+
+			// Verify password
+			if !auth.VerifyTeamLogin(m.svc.DB, m.team.SSHUser, password) {
+				flashErr := func() tea.Msg {
+					return msg.StatusFlash{Text: "Incorrect password. Hint request denied.", Success: false}
+				}
+				m.passInp.SetValue("")
+				return m, flashErr
+			}
+
+			// Password verified — dispense hint directly
+			body, cost, err := m.svc.DirectRedeemHint(m.team, m.selected.ID, m.typeSel)
+			if err != nil {
+				text := "Verification failed. Hint not dispensed."
+				switch {
+				case errors.Is(err, scoring.ErrNoHintsLeft):
+					text = "No hints of that type remain for this round."
+				case errors.Is(err, scoring.ErrRoundInactive):
+					text = "Round is not active."
+				}
+				flashErr := func() tea.Msg { return msg.StatusFlash{Text: text, Success: false} }
+				return m, flashErr
+			}
+			m.result = body
+			m.cost = cost
+			m.phase = hintDone
+			flashOK := func() tea.Msg {
+				return msg.StatusFlash{Text: fmt.Sprintf("INTEL DISPENSED! (−%s pts).", formatPoints(m.cost)), Success: true}
+			}
+			return m, flashOK
+		}
+
 		var cmd tea.Cmd
-		m.paste, cmd = m.paste.Update(msg_)
+		m.passInp, cmd = m.passInp.Update(msg_)
 		return m, cmd
 
 	default: // hintDone
@@ -269,56 +315,6 @@ func (m *RequestHintModel) loadRounds() []models.Round {
 	return rounds
 }
 
-func (m *RequestHintModel) issueChallenge() tea.Cmd {
-	challenge, _, cost, err := m.svc.HintChallenge(m.team, m.selected.ID, m.typeSel)
-	if err != nil {
-		text := "Cannot dispense hint."
-		switch {
-		case errors.Is(err, scoring.ErrNoHintsLeft):
-			text = "No hints of that type remain for this round."
-		case errors.Is(err, scoring.ErrRoundInactive):
-			text = "Round is not active."
-		}
-		return func() tea.Msg { return msg.StatusFlash{Text: text, Success: false} }
-	}
-	m.challenge = challenge
-	m.cost = cost
-	m.phase = hintSign
-	m.paste.Reset()
-	m.paste.Focus()
-	return textarea.Blink
-}
-
-func (m *RequestHintModel) redeem() tea.Cmd {
-	body, cost, err := m.svc.RedeemHint(m.team, m.selected.ID, m.typeSel, m.paste.Value())
-	if err != nil {
-		text := "Verification failed. Hint not dispensed."
-		switch {
-		case errors.Is(err, scoring.ErrNoHintsLeft):
-			text = "No hints of that type remain for this round."
-		case errors.Is(err, scoring.ErrBadChallenge):
-			text = "Signed challenge does not match the issued request."
-		case errors.Is(err, scoring.ErrChallengeStale):
-			text = "Signed challenge has expired. Please request a fresh challenge."
-		case errors.Is(err, auth.ErrBadSignature):
-			text = "PGP signature verification failed."
-		case errors.Is(err, auth.ErrNoSignature):
-			text = "No valid PGP signature found in input."
-		case errors.Is(err, scoring.ErrRoundInactive):
-			text = "Round is not active."
-		}
-		flashErr := func() tea.Msg { return msg.StatusFlash{Text: text, Success: false} }
-		return flashErr
-	}
-	m.result = body
-	m.cost = cost
-	m.phase = hintDone
-	flashOK := func() tea.Msg {
-		return msg.StatusFlash{Text: fmt.Sprintf("INTEL DISPENSED! (−%s pts).", formatPoints(m.cost)), Success: true}
-	}
-	return flashOK
-}
-
 func (m RequestHintModel) renderWizardBar() string {
 	steps := []struct {
 		id    hintPhase
@@ -326,7 +322,7 @@ func (m RequestHintModel) renderWizardBar() string {
 	}{
 		{hintSelectRound, "1. SELECT ROUND"},
 		{hintSelectType, "2. HINT TYPE"},
-		{hintSign, "3. PGP CLEARSIGN"},
+		{hintConfirm, "3. PASSWORD CONFIRMATION"},
 		{hintDone, "4. UNLOCKED INTEL"},
 	}
 
@@ -395,153 +391,56 @@ func (m RequestHintModel) View() string {
 		b.WriteString(targetCard + "\n\n")
 		b.WriteString(m.typ.View() + "\n\n")
 		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).
-			Render("[↑/↓] Choose Type  •  [Enter] Issue PGP Nonce  •  [Esc] Back to Rounds"))
+			Render("[↑/↓] Choose Type  •  [Enter] Confirm Selection  •  [Esc] Back to Rounds"))
 		body = b.String()
 
-	case hintSign:
-		var b strings.Builder
-		keyID := auth.PublicKeyID(m.team.PGPPubkey)
-		gpgCmd := "gpg --clearsign"
-		if keyID != "" {
-			gpgCmd = fmt.Sprintf("gpg --clearsign -u %s", keyID)
-		}
+	case hintConfirm:
+		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#00B4D8")).Padding(0, 1).Render(" 🔒 CONFIRM INTEL REQUEST ")
 
-		availW := w - 8
+		targetInfo := fmt.Sprintf("\nTarget   : Round %d — %s\nHint Type: %s\nCost     : −%s PTS\n",
+			m.selected.ID, m.selected.Name, strings.ToUpper(m.typeSel), formatPoints(m.cost))
 
-		// Step 1: Challenge Nonce Box
-		nonceHeader := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
-			Background(lipgloss.Color("#FFB800")).Padding(0, 1).Render("STEP 1: NONCE CHALLENGE")
+		targetStyled := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#F0F6FC")).
+			Render(targetInfo)
 
-		// Step 2: Pasted Signature Box
-		inputHeader := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
-			Background(lipgloss.Color("#00F0FF")).Padding(0, 1).Render("STEP 2: PASTE SIGNED MESSAGE")
+		prompt := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#00B4D8")).
+			Render("Enter your team password to authorize hint dispensation:")
 
-		if w >= 90 {
-			// Dual Pane 1:1 proportional layout (Golden Rule #4)
-			paneW := (availW - 2) / 2
-			if paneW < 38 {
-				paneW = 38
-			}
-			m.paste.SetWidth(paneW - 4)
-			m.paste.SetHeight(10)
+		inputCard := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#00B4D8")).
+			Background(lipgloss.Color("#0D1117")).
+			Padding(1, 2).
+			Render(m.passInp.View())
 
-			tokenBox := lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("#30363D")).
-				Background(lipgloss.Color("#0D1117")).
-				Foreground(lipgloss.Color("#00FF9D")).
-				Bold(true).
-				Padding(0, 1).
-				Width(paneW - 6).
-				Render(m.challenge)
+		btnHelp := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("#00FF9D")).
+			Render("[Enter] Verify & Dispense Intel  ") +
+			lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).Render("•  [Esc] Back to Type Selection")
 
-			cmdBox := lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("#30363D")).
-				Background(lipgloss.Color("#0D1117")).
-				Foreground(lipgloss.Color("#00F0FF")).
-				Bold(true).
-				Padding(0, 1).
-				Width(paneW - 6).
-				Render(fmt.Sprintf("$ %s", gpgCmd))
+		box := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#30363D")).
+			Background(lipgloss.Color("#161B22")).
+			Padding(1, 3).
+			Width(w - 6).
+			Render(lipgloss.JoinVertical(lipgloss.Left,
+				header,
+				targetStyled,
+				prompt,
+				"",
+				inputCard,
+				"",
+				btnHelp,
+			))
 
-			eofGuide := lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#C9D1D9")).
-				Render("• Paste token into stdin, then send EOF:\n  Linux/macOS: [Ctrl+D]\n  Windows:     [Ctrl+Z] then [Enter]")
-
-			fileTip := lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#8B949E")).
-				Render(fmt.Sprintf("• Or save to hint.txt and run:\n  $ %s hint.txt", gpgCmd))
-
-			nonceContent := lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("#FFB800")).
-				Background(lipgloss.Color("#161B22")).
-				Padding(1, 2).
-				Width(paneW).
-				Render(lipgloss.JoinVertical(lipgloss.Left,
-					nonceHeader,
-					"",
-					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#58A6FF")).Render("1. Nonce Challenge Token:"),
-					tokenBox,
-					"",
-					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#58A6FF")).Render("2. Run in terminal:"),
-					cmdBox,
-					"",
-					eofGuide,
-					"",
-					fileTip,
-				))
-
-			inputCard := lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("#00F0FF")).
-				Background(lipgloss.Color("#161B22")).
-				Padding(1, 2).
-				Width(paneW).
-				Render(lipgloss.JoinVertical(lipgloss.Left,
-					inputHeader,
-					"",
-					m.paste.View(),
-					"",
-					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF9D")).Render("[Ctrl+S] Verify Signature & Dispense Intel"),
-					lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).Render("[Esc] Return to Type Selection"),
-				))
-
-			b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, nonceContent, "  ", inputCard))
-		} else {
-			m.paste.SetWidth(availW - 4)
-			m.paste.SetHeight(5)
-
-			tokenBox := lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("#30363D")).
-				Background(lipgloss.Color("#0D1117")).
-				Foreground(lipgloss.Color("#00FF9D")).
-				Bold(true).
-				Padding(0, 1).
-				Render(m.challenge)
-
-			cmdBox := lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("#30363D")).
-				Background(lipgloss.Color("#0D1117")).
-				Foreground(lipgloss.Color("#00F0FF")).
-				Bold(true).
-				Padding(0, 1).
-				Render(fmt.Sprintf("$ %s", gpgCmd))
-
-			nonceContent := lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("#FFB800")).
-				Background(lipgloss.Color("#161B22")).
-				Padding(1, 2).
-				Width(availW).
-				Render(lipgloss.JoinVertical(lipgloss.Left,
-					nonceHeader,
-					"",
-					tokenBox,
-					cmdBox,
-					lipgloss.NewStyle().Foreground(lipgloss.Color("#C9D1D9")).Render("Paste token, then press Ctrl+D (Unix) or Ctrl+Z+Enter (Windows)"),
-				))
-
-			inputCard := lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(lipgloss.Color("#00F0FF")).
-				Background(lipgloss.Color("#161B22")).
-				Padding(1, 2).
-				Width(availW).
-				Render(lipgloss.JoinVertical(lipgloss.Left,
-					inputHeader,
-					"",
-					m.paste.View(),
-					"",
-					lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF9D")).Render("[Ctrl+S] Verify & Dispense  •  [Esc] Cancel"),
-				))
-
-			b.WriteString(lipgloss.JoinVertical(lipgloss.Left, nonceContent, "\n", inputCard))
-		}
-		body = b.String()
+		body = box
 
 	default: // hintDone
 		var b strings.Builder
@@ -582,4 +481,3 @@ func max0(n int) int {
 	}
 	return n
 }
-

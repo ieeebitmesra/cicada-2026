@@ -2,9 +2,7 @@ package views
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -18,16 +16,14 @@ import (
 const (
 	regFocusPass = iota
 	regFocusConfirm
-	regFocusPubkey
 )
 
-// RegisterModel handles first-login registration (new password + PGP key).
+// RegisterModel handles first-login registration (new password).
 type RegisterModel struct {
 	width, height int
 
 	passInput    textinput.Model
 	confirmInput textinput.Model
-	pubkey       textarea.Model
 	focus        int
 
 	err  string
@@ -55,18 +51,7 @@ func NewRegister(db *store.DB, team *models.Team) RegisterModel {
 	confirm.PromptStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00B4D8"))
 	confirm.TextStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F8FAFC"))
 
-	pk := textarea.New()
-	pk.Placeholder = "-----BEGIN PGP PUBLIC KEY BLOCK-----\n...\n-----END PGP PUBLIC KEY BLOCK-----"
-	pk.CharLimit = 16384
-	pk.SetWidth(64)
-	pk.SetHeight(6)
-	pk.ShowLineNumbers = false
-	pk.FocusedStyle.Base = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#00B4D8")).
-		Background(lipgloss.Color("#0B0F19"))
-
-	m := RegisterModel{passInput: pass, confirmInput: confirm, pubkey: pk, db: db, team: team}
+	m := RegisterModel{passInput: pass, confirmInput: confirm, db: db, team: team}
 	m.refocus()
 	return m
 }
@@ -74,23 +59,17 @@ func NewRegister(db *store.DB, team *models.Team) RegisterModel {
 func (m *RegisterModel) refocus() {
 	m.passInput.Blur()
 	m.confirmInput.Blur()
-	m.pubkey.Blur()
 	switch m.focus {
 	case regFocusPass:
 		m.passInput.Focus()
 	case regFocusConfirm:
 		m.confirmInput.Focus()
-	case regFocusPubkey:
-		m.pubkey.Focus()
 	}
 }
 
 // SetSize implements sizing.
 func (m *RegisterModel) SetSize(w, h int) {
 	m.width, m.height = w, h
-	if w > 14 {
-		m.pubkey.SetWidth(w - 14)
-	}
 }
 
 // Update handles input + submission.
@@ -98,51 +77,43 @@ func (m RegisterModel) Update(msg_ tea.Msg) (RegisterModel, tea.Cmd) {
 	if key, ok := msg_.(tea.KeyMsg); ok {
 		switch key.String() {
 		case "tab", "down":
-			m.focus = (m.focus + 1) % 3
+			m.focus = (m.focus + 1) % 2
 			m.refocus()
 			return m, nil
 		case "shift+tab", "up":
-			m.focus = (m.focus + 2) % 3
+			m.focus = (m.focus + 1) % 2
 			m.refocus()
 			return m, nil
-		case "ctrl+s":
+		case "ctrl+s", "enter":
 			return m, m.submit()
 		}
 	}
 
-	var cmds []tea.Cmd
 	var cmd tea.Cmd
 	switch m.focus {
 	case regFocusPass:
 		m.passInput, cmd = m.passInput.Update(msg_)
-		cmds = append(cmds, cmd)
 	case regFocusConfirm:
 		m.confirmInput, cmd = m.confirmInput.Update(msg_)
-		cmds = append(cmds, cmd)
-	default:
-		m.pubkey, cmd = m.pubkey.Update(msg_)
-		cmds = append(cmds, cmd)
 	}
-	return m, tea.Batch(cmds...)
+	return m, cmd
 }
 
 func (m *RegisterModel) submit() tea.Cmd {
 	pass := m.passInput.Value()
 	confirm := m.confirmInput.Value()
 
-	if err := validateRegistration(pass, confirm, m.pubkey.Value()); err != nil {
+	if err := validateRegistration(pass, confirm); err != nil {
 		m.err = err.Error()
 		return nil
 	}
 	m.err = ""
 
-	newKey := strings.TrimSpace(m.pubkey.Value())
-	if err := auth.CompleteRegistration(m.db, m.team, pass, newKey); err != nil {
+	if err := auth.CompleteRegistration(m.db, m.team, pass); err != nil {
 		m.err = err.Error()
 		return nil
 	}
 	// Mutate shared team state so the rest of the TUI sees registration.
-	m.team.PGPPubkey = newKey
 	m.team.Registered = true
 
 	flash := func() tea.Msg { return msg.StatusFlash{Text: "Account registered successfully. Welcome!", Success: true} }
@@ -150,15 +121,12 @@ func (m *RegisterModel) submit() tea.Cmd {
 	return tea.Sequence(flash, nav)
 }
 
-func validateRegistration(pass, confirm, pubkey string) error {
+func validateRegistration(pass, confirm string) error {
 	if len(pass) < 8 {
 		return fmt.Errorf("password must be at least 8 characters")
 	}
 	if pass != confirm {
 		return fmt.Errorf("passwords do not match")
-	}
-	if !strings.Contains(pubkey, "-----BEGIN PGP PUBLIC KEY BLOCK-----") {
-		return fmt.Errorf("paste an armored PGP PUBLIC key block")
 	}
 	return nil
 }
@@ -179,7 +147,7 @@ func (m RegisterModel) View() string {
 
 	subtitle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#C9D1D9")).
-		Render("\nFirst-time login detected. Secure your team account with a password and PGP key.\n")
+		Render("\nFirst-time login detected. Secure your team account with a new password.\n")
 
 	// Form inputs styling
 	labelActive := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00F0FF"))
@@ -219,13 +187,6 @@ func (m RegisterModel) View() string {
 		Padding(0, 1).
 		Render(m.confirmInput.View())
 
-	// Field 3: PGP Public Key
-	lblPubkey := labelDim.Render("  Armored PGP Public Key ($ gpg --armor --export <id>):")
-	if m.focus == regFocusPubkey {
-		lblPubkey = labelActive.Render("▸ Armored PGP Public Key ($ gpg --armor --export <id>):")
-	}
-	field3 := m.pubkey.View()
-
 	var errBox string
 	if m.err != "" {
 		errBox = "\n" + lipgloss.NewStyle().
@@ -240,7 +201,7 @@ func (m RegisterModel) View() string {
 
 	helpBar := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#8B949E")).
-		Render("\n[Tab] Next Field  •  [Shift+Tab] Previous Field  •  [Ctrl+S] Save Credentials")
+		Render("\n[Tab] Next Field  •  [Shift+Tab] Previous Field  •  [Enter] Save Credentials")
 
 	formBox := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -254,9 +215,6 @@ func (m RegisterModel) View() string {
 			"",
 			lblConfirm,
 			field2,
-			"",
-			lblPubkey,
-			field3,
 			errBox,
 			helpBar,
 		))
