@@ -224,28 +224,54 @@ func (m *TeamStatusModel) buildReport() string {
 
 	// 4. Hints Inventory / History Section
 	var hintsSection string
-	if len(bd.Hints) > 0 {
+	if len(bd.UnlockedHints) > 0 {
 		var hBuilder strings.Builder
 		hTitle := lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("#0B0F19")).
 			Background(lipgloss.Color("#FFB800")).
 			Padding(0, 1).
-			Render(" TACTICAL INTEL (HINTS DISPENSED) ")
+			Render(" TACTICAL INTEL (UNLOCKED HINTS ARCHIVE) ")
 		hBuilder.WriteString(hTitle + "\n\n")
 
-		for _, h := range bd.Hints {
+		cardW := w - 16
+		if cardW < 24 {
+			cardW = 24
+		}
+
+		for _, h := range bd.UnlockedHints {
 			typPill := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
-				Background(lipgloss.Color("#00F0FF")).Padding(0, 1).Render(strings.ToUpper(h.HintType))
-			hBuilder.WriteString(fmt.Sprintf("  • Round %-2d  %s #%d  cost: −%s pts  (clearsign verified)\n",
-				h.RoundID, typPill, h.HintIndex+1, formatPoints(h.CostPoints)))
+				Background(lipgloss.Color("#00F0FF")).Padding(0, 1).Render(strings.ToUpper(h.HintType) + " #" + fmt.Sprint(h.HintIndex+1))
+
+			costTag := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF3860")).
+				Render(fmt.Sprintf("−%s PTS", formatPoints(h.CostPoints)))
+
+			roundLabel := fmt.Sprintf("Round %d", h.RoundID)
+			if h.RoundName != "" {
+				roundLabel = fmt.Sprintf("Round %d — %s", h.RoundID, h.RoundName)
+			}
+
+			headerLine := lipgloss.JoinHorizontal(lipgloss.Center,
+				lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F0F6FC")).Render(roundLabel),
+				"  ", typPill, "  ", costTag)
+
+			clueText := lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("#30363D")).
+				Background(lipgloss.Color("#0D1117")).
+				Foreground(lipgloss.Color("#00FF9D")).
+				Padding(0, 1).
+				Width(cardW).
+				Render(h.Text)
+
+			hBuilder.WriteString(headerLine + "\n" + clueText + "\n\n")
 		}
 
 		hintsSection = "\n" + lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#30363D")).
 			Background(lipgloss.Color("#161B22")).
-			Padding(0, 1).
+			Padding(1, 2).
 			Width(w - 10).
 			Render(hBuilder.String())
 	}

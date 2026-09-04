@@ -26,6 +26,77 @@ const (
 	hintDone
 )
 
+type hintRoundItem struct {
+	id            int
+	title         string
+	desc          string
+	points        int
+	unlockedCount int
+	plainLeft     int
+	plainTotal    int
+	encLeft       int
+	encTotal      int
+}
+
+func (i hintRoundItem) Title() string       { return i.title }
+func (i hintRoundItem) Description() string { return i.desc }
+func (i hintRoundItem) FilterValue() string { return i.title }
+
+type hintRoundDelegate struct {
+	width int
+}
+
+func (d hintRoundDelegate) Height() int                             { return 2 }
+func (d hintRoundDelegate) Spacing() int                            { return 1 }
+func (d hintRoundDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d hintRoundDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	it, ok := listItem.(hintRoundItem)
+	if !ok {
+		return
+	}
+
+	selected := index == m.Index()
+	maxWidth := d.width - 4
+	if maxWidth < 20 {
+		maxWidth = 20
+	}
+
+	var badge string
+	if it.unlockedCount > 0 {
+		badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#00FF9D")).Padding(0, 1).Render(fmt.Sprintf("🔓 %d INTEL", it.unlockedCount))
+	} else {
+		badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#00F0FF")).Padding(0, 1).Render("🔒 0 INTEL")
+	}
+
+	pointsBadge := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFB800")).
+		Background(lipgloss.Color("#161B22")).Padding(0, 1).Render(fmt.Sprintf("+%d PTS", it.points))
+
+	var prefix, titleStyled, descStyled string
+	availTitleW := maxWidth - 22
+	if availTitleW < 10 {
+		availTitleW = 10
+	}
+
+	if selected {
+		prefix = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00F0FF")).Render("▸ ")
+		titleStyled = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F0F6FC")).
+			Background(lipgloss.Color("#161B22")).Padding(0, 1).Render(Truncate(it.title, availTitleW))
+		descStyled = lipgloss.NewStyle().Foreground(lipgloss.Color("#00F0FF")).Render("    " + Truncate(it.desc, maxWidth-6))
+	} else {
+		prefix = "  "
+		titleStyled = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#C9D1D9")).Render(Truncate(it.title, availTitleW))
+		descStyled = lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).Render("    " + Truncate(it.desc, maxWidth-6))
+	}
+
+	row1 := prefix + badge + " " + titleStyled + "  " + pointsBadge
+	row2 := descStyled
+
+	fmt.Fprintf(w, "%s\n%s", row1, row2)
+}
+
 type hintTypeItem struct {
 	typ  string // "plain" | "encoded"
 	cost string
@@ -52,29 +123,29 @@ func (d hintTypeDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 
 	selected := index == m.Index()
 
-	badgeColor := "#00B4D8"
+	badgeColor := "#00F0FF"
 	if it.typ == "plain" {
-		badgeColor = "#F59E0B"
+		badgeColor = "#FFB800"
 	}
 	badge := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
 		Background(lipgloss.Color(badgeColor)).Padding(0, 1).Render(strings.ToUpper(it.typ))
 
-	costBadge := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F8FAFC")).
-		Background(lipgloss.Color("#1E293B")).Padding(0, 1).Render(it.cost)
+	costBadge := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F0F6FC")).
+		Background(lipgloss.Color("#161B22")).Padding(0, 1).Render(it.cost)
 
 	var prefix, descStyled string
 	if selected {
-		prefix = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00B4D8")).Render("▸ ")
-		descStyled = lipgloss.NewStyle().Foreground(lipgloss.Color("#00B4D8")).Render("    " + it.desc)
+		prefix = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00F0FF")).Render("▸ ")
+		descStyled = lipgloss.NewStyle().Foreground(lipgloss.Color("#00F0FF")).Render("    " + it.desc)
 	} else {
 		prefix = "  "
-		descStyled = lipgloss.NewStyle().Foreground(lipgloss.Color("#64748B")).Render("    " + it.desc)
+		descStyled = lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).Render("    " + it.desc)
 	}
 
 	fmt.Fprintf(w, "%s%s  %s\n%s", prefix, badge, costBadge, descStyled)
 }
 
-// RequestHintModel walks the password-confirmed hint request flow.
+// RequestHintModel walks the hint request and persistent intel viewing flow.
 type RequestHintModel struct {
 	width, height int
 	phase         hintPhase
@@ -83,18 +154,19 @@ type RequestHintModel struct {
 	typ     list.Model
 	passInp textinput.Model
 
-	svc      *scoring.Service
-	team     *models.Team
-	selected models.Round
-	typeSel  string
-	cost     float64
+	svc           *scoring.Service
+	team          *models.Team
+	selected      models.Round
+	unlockedHints []scoring.UnlockedHint
+	typeSel       string
+	cost          float64
 
 	result string
 }
 
 // NewRequestHint builds the hint flow view.
 func NewRequestHint(svc *scoring.Service, team *models.Team) RequestHintModel {
-	l := list.New([]list.Item{}, flagRoundDelegate{}, 0, 0)
+	l := list.New([]list.Item{}, hintRoundDelegate{width: 54}, 0, 0)
 	l.Title = "SELECT TARGET CHALLENGE FOR INTEL"
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
@@ -102,32 +174,29 @@ func NewRequestHint(svc *scoring.Service, team *models.Team) RequestHintModel {
 	l.Styles.Title = lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("#0B0F19")).
-		Background(lipgloss.Color("#00B4D8")).
+		Background(lipgloss.Color("#00F0FF")).
 		Padding(0, 1)
 
-	t := list.New([]list.Item{
-		hintTypeItem{"plain", "Cost: 20% of round value", "Direct plain text clue • Immediate tactical advantage"},
-		hintTypeItem{"encoded", "Cost: 10% of round value", "Encrypted / algorithmic puzzle clue • Lower penalty"},
-	}, hintTypeDelegate{width: 54}, 0, 0)
-	t.Title = "SELECT INTEL CLEARANCE TYPE"
+	t := list.New([]list.Item{}, hintTypeDelegate{width: 54}, 0, 0)
+	t.Title = "SELECT INTEL CLEARANCE TYPE TO REQUEST"
 	t.SetShowStatusBar(false)
 	t.SetFilteringEnabled(false)
 	t.SetShowHelp(false)
 	t.Styles.Title = lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("#0B0F19")).
-		Background(lipgloss.Color("#F59E0B")).
+		Background(lipgloss.Color("#FFB800")).
 		Padding(0, 1)
 
 	passInp := textinput.New()
-	passInp.Placeholder = "Enter your team password to confirm"
+	passInp.Placeholder = "Enter your team password to authorize"
 	passInp.EchoMode = textinput.EchoPassword
 	passInp.CharLimit = 128
 	passInp.Width = 44
 	passInp.Prompt = "❯ "
-	passInp.PromptStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00B4D8"))
-	passInp.TextStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F8FAFC"))
-	passInp.PlaceholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#475569"))
+	passInp.PromptStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00F0FF"))
+	passInp.TextStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F0F6FC"))
+	passInp.PlaceholderStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E"))
 
 	return RequestHintModel{list: l, typ: t, passInp: passInp, svc: svc, team: team}
 }
@@ -135,12 +204,22 @@ func NewRequestHint(svc *scoring.Service, team *models.Team) RequestHintModel {
 // SetSize implements sizing.
 func (m *RequestHintModel) SetSize(w, h int) {
 	m.width, m.height = w, h
-	listW := w - 4
+
+	availableW := w - 6
+	listW := availableW
+	if w >= 90 {
+		listW = (availableW * 5) / 9
+	}
+	if listW < 30 {
+		listW = 30
+	}
+
 	listH := h - 8
 	if listH < 6 {
 		listH = 6
 	}
-	m.list.SetDelegate(flagRoundDelegate{width: listW})
+
+	m.list.SetDelegate(hintRoundDelegate{width: listW})
 	m.list.SetSize(listW, listH)
 	m.typ.SetDelegate(hintTypeDelegate{width: listW})
 	m.typ.SetSize(listW, listH)
@@ -172,22 +251,31 @@ func (m *RequestHintModel) Refresh() tea.Cmd {
 			continue
 		}
 
-		plainLeft := m.svc.Rounds.CountHints(r.ID, "plain")
-		encLeft := m.svc.Rounds.CountHints(r.ID, "encoded")
+		plainTotal := m.svc.Rounds.CountHints(r.ID, "plain")
+		encTotal := m.svc.Rounds.CountHints(r.ID, "encoded")
 		usedP, _ := m.svc.DB.CountHintsUsed(m.team.ID, r.ID, "plain")
 		usedE, _ := m.svc.DB.CountHintsUsed(m.team.ID, r.ID, "encoded")
+		unlockedCount := usedP + usedE
 
-		desc := fmt.Sprintf("Hints remaining: plain %d/%d • encoded %d/%d",
-			max0(plainLeft-usedP), plainLeft, max0(encLeft-usedE), encLeft)
+		var desc string
+		if unlockedCount > 0 {
+			desc = fmt.Sprintf("Unlocked: %d intel • Plain %d/%d • Encoded %d/%d left",
+				unlockedCount, max0(plainTotal-usedP), plainTotal, max0(encTotal-usedE), encTotal)
+		} else {
+			desc = fmt.Sprintf("Available: Plain %d/%d • Encoded %d/%d",
+				max0(plainTotal-usedP), plainTotal, max0(encTotal-usedE), encTotal)
+		}
 
-		items = append(items, roundItem{
-			id:     r.ID,
-			title:  fmt.Sprintf("Round %d — %s", r.ID, r.Name),
-			desc:   desc,
-			points: r.Points,
-			solved: false,
-			skip:   false,
-			open:   true,
+		items = append(items, hintRoundItem{
+			id:            r.ID,
+			title:         fmt.Sprintf("Round %d — %s", r.ID, r.Name),
+			desc:          desc,
+			points:        r.Points,
+			unlockedCount: unlockedCount,
+			plainLeft:     max0(plainTotal - usedP),
+			plainTotal:    plainTotal,
+			encLeft:       max0(encTotal - usedE),
+			encTotal:      encTotal,
 		})
 	}
 	cmd := m.list.SetItems(items)
@@ -203,6 +291,9 @@ func (m RequestHintModel) Update(msg_ tea.Msg) (RequestHintModel, tea.Cmd) {
 			return m, tea.Quit
 		case "esc":
 			switch m.phase {
+			case hintDone:
+				m.phase = hintSelectType
+				return m, nil
 			case hintConfirm:
 				m.phase = hintSelectType
 				m.passInp.Blur()
@@ -220,13 +311,41 @@ func (m RequestHintModel) Update(msg_ tea.Msg) (RequestHintModel, tea.Cmd) {
 	switch m.phase {
 	case hintSelectRound:
 		if key, ok := msg_.(tea.KeyMsg); ok && key.String() == "enter" {
-			if it, ok := m.list.SelectedItem().(roundItem); ok {
+			if it, ok := m.list.SelectedItem().(hintRoundItem); ok {
 				for _, r := range m.loadRounds() {
 					if r.ID == it.id {
 						m.selected = r
 						break
 					}
 				}
+				// Load unlocked hints for this round
+				m.unlockedHints, _ = m.svc.RoundUnlockedHints(m.team.ID, m.selected.ID)
+
+				// Populate available hint types
+				plainLeft := m.svc.Rounds.CountHints(m.selected.ID, "plain")
+				encLeft := m.svc.Rounds.CountHints(m.selected.ID, "encoded")
+				usedP, _ := m.svc.DB.CountHintsUsed(m.team.ID, m.selected.ID, "plain")
+				usedE, _ := m.svc.DB.CountHintsUsed(m.team.ID, m.selected.ID, "encoded")
+
+				var typeItems []list.Item
+				if usedP < plainLeft {
+					costP := scoring.HintCost(m.selected.Points, "plain")
+					typeItems = append(typeItems, hintTypeItem{
+						typ:  "plain",
+						cost: fmt.Sprintf("Cost: −%s PTS (20%%)", formatPoints(costP)),
+						desc: "Direct plain text clue • Immediate tactical advantage",
+					})
+				}
+				if usedE < encLeft {
+					costE := scoring.HintCost(m.selected.Points, "encoded")
+					typeItems = append(typeItems, hintTypeItem{
+						typ:  "encoded",
+						cost: fmt.Sprintf("Cost: −%s PTS (10%%)", formatPoints(costE)),
+						desc: "Encrypted / algorithmic puzzle clue • Lower penalty",
+					})
+				}
+
+				m.typ.SetItems(typeItems)
 				m.phase = hintSelectType
 				return m, nil
 			}
@@ -237,17 +356,15 @@ func (m RequestHintModel) Update(msg_ tea.Msg) (RequestHintModel, tea.Cmd) {
 
 	case hintSelectType:
 		if key, ok := msg_.(tea.KeyMsg); ok && key.String() == "enter" {
-			if it, ok := m.typ.SelectedItem().(hintTypeItem); ok {
-				m.typeSel = it.typ
-				// Calculate cost preview
-				round := m.svc.Rounds.Def(m.selected.ID)
-				if round != nil {
-					m.cost = scoring.HintCost(round.Points, m.typeSel)
+			if len(m.typ.Items()) > 0 {
+				if it, ok := m.typ.SelectedItem().(hintTypeItem); ok {
+					m.typeSel = it.typ
+					m.cost = scoring.HintCost(m.selected.Points, m.typeSel)
+					m.phase = hintConfirm
+					m.passInp.SetValue("")
+					m.passInp.Focus()
+					return m, textinput.Blink
 				}
-				m.phase = hintConfirm
-				m.passInp.SetValue("")
-				m.passInp.Focus()
-				return m, textinput.Blink
 			}
 		}
 		var cmd tea.Cmd
@@ -288,6 +405,7 @@ func (m RequestHintModel) Update(msg_ tea.Msg) (RequestHintModel, tea.Cmd) {
 			}
 			m.result = body
 			m.cost = cost
+			m.unlockedHints, _ = m.svc.RoundUnlockedHints(m.team.ID, m.selected.ID)
 			m.phase = hintDone
 			flashOK := func() tea.Msg {
 				return msg.StatusFlash{Text: fmt.Sprintf("INTEL DISPENSED! (−%s pts).", formatPoints(m.cost)), Success: true}
@@ -300,7 +418,7 @@ func (m RequestHintModel) Update(msg_ tea.Msg) (RequestHintModel, tea.Cmd) {
 		return m, cmd
 
 	default: // hintDone
-		if key, ok := msg_.(tea.KeyMsg); ok && key.String() == "enter" {
+		if key, ok := msg_.(tea.KeyMsg); ok && (key.String() == "enter" || key.String() == " ") {
 			return m, func() tea.Msg { return msg.Navigate{Target: msg.TDashboard} }
 		}
 		return m, nil
@@ -321,15 +439,14 @@ func (m RequestHintModel) renderWizardBar() string {
 		label string
 	}{
 		{hintSelectRound, "1. SELECT ROUND"},
-		{hintSelectType, "2. HINT TYPE"},
+		{hintSelectType, "2. UNLOCKED INTEL & REQUEST"},
 		{hintConfirm, "3. PASSWORD CONFIRMATION"},
-		{hintDone, "4. UNLOCKED INTEL"},
+		{hintDone, "4. NEW INTEL DISPENSED"},
 	}
 
 	var parts []string
 	for _, s := range steps {
 		if s.id == m.phase {
-			// Current active
 			parts = append(parts, lipgloss.NewStyle().
 				Bold(true).
 				Foreground(lipgloss.Color("#0B0F19")).
@@ -337,7 +454,6 @@ func (m RequestHintModel) renderWizardBar() string {
 				Padding(0, 1).
 				Render("► "+s.label))
 		} else if s.id < m.phase {
-			// Completed
 			parts = append(parts, lipgloss.NewStyle().
 				Bold(true).
 				Foreground(lipgloss.Color("#00FF9D")).
@@ -345,7 +461,6 @@ func (m RequestHintModel) renderWizardBar() string {
 				Padding(0, 1).
 				Render("✓ "+s.label))
 		} else {
-			// Future
 			parts = append(parts, lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#8B949E")).
 				Background(lipgloss.Color("#161B22")).
@@ -370,33 +485,55 @@ func (m RequestHintModel) View() string {
 	var body string
 	switch m.phase {
 	case hintSelectRound:
-		body = m.list.View()
+		if len(m.list.Items()) == 0 {
+			body = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(lipgloss.Color("#30363D")).
+				Background(lipgloss.Color("#161B22")).
+				Padding(1, 2).
+				Render(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF9D")).
+					Render("✔ No remaining active challenges with hints available."))
+		} else {
+			if w >= 90 {
+				hudW := w - m.list.Width() - 8
+				if hudW < 30 {
+					hudW = 30
+				}
+				hud := m.renderRoundHUD(hudW)
+				body = lipgloss.JoinHorizontal(lipgloss.Top, m.list.View(), "  ", hud)
+			} else {
+				body = m.list.View()
+			}
+		}
 
 	case hintSelectType:
 		var b strings.Builder
-		plainLeft := m.svc.Rounds.CountHints(m.selected.ID, "plain")
-		encLeft := m.svc.Rounds.CountHints(m.selected.ID, "encoded")
-		usedP, _ := m.svc.DB.CountHintsUsed(m.team.ID, m.selected.ID, "plain")
-		usedE, _ := m.svc.DB.CountHintsUsed(m.team.ID, m.selected.ID, "encoded")
+		availW := w - 8
 
-		targetCard := lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#30363D")).
-			Background(lipgloss.Color("#161B22")).
-			Padding(0, 1).
-			Render(fmt.Sprintf("Target: Round %d — %s (%d pts)  •  Inventory: Plain %d/%d  Encoded %d/%d",
-				m.selected.ID, m.selected.Name, m.selected.Points,
-				max0(plainLeft-usedP), plainLeft, max0(encLeft-usedE), encLeft))
+		// 1. Unlocked Intel Archive Section
+		unlockedCard := m.renderUnlockedHintsBox(availW)
+		b.WriteString(unlockedCard + "\n\n")
 
-		b.WriteString(targetCard + "\n\n")
-		b.WriteString(m.typ.View() + "\n\n")
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).
-			Render("[↑/↓] Choose Type  •  [Enter] Confirm Selection  •  [Esc] Back to Rounds"))
+		// 2. Request Next Hint Section
+		if len(m.typ.Items()) > 0 {
+			b.WriteString(m.typ.View() + "\n\n")
+			b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).
+				Render("[↑/↓] Choose Hint Type  •  [Enter] Request Intel  •  [Esc] Back to Rounds"))
+		} else {
+			allDone := lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("#00FF9D")).
+				Render("✔ All available tactical intel has been unlocked for this challenge.")
+			escHelp := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#8B949E")).
+				Render("Press [Esc] to return to Round Selection.")
+			b.WriteString(allDone + "\n" + escHelp)
+		}
 		body = b.String()
 
 	case hintConfirm:
 		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
-			Background(lipgloss.Color("#00B4D8")).Padding(0, 1).Render(" 🔒 CONFIRM INTEL REQUEST ")
+			Background(lipgloss.Color("#00F0FF")).Padding(0, 1).Render(" 🔒 AUTHORIZE INTEL CLEARANCE ")
 
 		targetInfo := fmt.Sprintf("\nTarget   : Round %d — %s\nHint Type: %s\nCost     : −%s PTS\n",
 			m.selected.ID, m.selected.Name, strings.ToUpper(m.typeSel), formatPoints(m.cost))
@@ -408,12 +545,12 @@ func (m RequestHintModel) View() string {
 
 		prompt := lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("#00B4D8")).
-			Render("Enter your team password to authorize hint dispensation:")
+			Foreground(lipgloss.Color("#00F0FF")).
+			Render("Enter your team password to authorize hint points deduction:")
 
 		inputCard := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#00B4D8")).
+			BorderForeground(lipgloss.Color("#00F0FF")).
 			Background(lipgloss.Color("#0D1117")).
 			Padding(1, 2).
 			Render(m.passInp.View())
@@ -421,7 +558,7 @@ func (m RequestHintModel) View() string {
 		btnHelp := lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("#00FF9D")).
-			Render("[Enter] Verify & Dispense Intel  ") +
+			Render("[Enter] Verify Password & Unlock Intel  ") +
 			lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).Render("•  [Esc] Back to Type Selection")
 
 		box := lipgloss.NewStyle().
@@ -460,12 +597,16 @@ func (m RequestHintModel) View() string {
 			Width(w - 8).
 			Render(m.result)
 
+		archiveNote := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#00FF9D")).
+			Render("💡 This intel is permanently archived. You can re-view it anytime in Request Hint or My Status.")
+
 		cta := lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("#00F0FF")).
-			Render("Press [Enter] to return to Command Deck")
+			Render("Press [Enter] to return to Command Deck • [Esc] Back to Round Selection")
 
-		b.WriteString(lipgloss.JoinVertical(lipgloss.Left, unlockBanner, "\n", intelBox, "\n", cta))
+		b.WriteString(lipgloss.JoinVertical(lipgloss.Left, unlockBanner, "\n", intelBox, "\n", archiveNote, "\n", cta))
 		body = b.String()
 	}
 
@@ -475,9 +616,125 @@ func (m RequestHintModel) View() string {
 		Render(lipgloss.JoinVertical(lipgloss.Left, wizard, "\n", body))
 }
 
+func (m RequestHintModel) renderUnlockedHintsBox(width int) string {
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#0B0F19")).
+		Background(lipgloss.Color("#00FF9D")).
+		Padding(0, 1).
+		Render(fmt.Sprintf(" UNLOCKED INTEL ARCHIVE: Round %d — %s ", m.selected.ID, m.selected.Name))
+
+	var b strings.Builder
+	b.WriteString(title + "\n\n")
+
+	if len(m.unlockedHints) == 0 {
+		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).
+			Render("No intel unlocked yet for this challenge. Select a clearance type below to request a clue."))
+	} else {
+		cardW := width - 6
+		if cardW < 24 {
+			cardW = 24
+		}
+
+		for i, h := range m.unlockedHints {
+			badgeColor := "#00F0FF"
+			if h.HintType == "plain" {
+				badgeColor = "#FFB800"
+			}
+			badge := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+				Background(lipgloss.Color(badgeColor)).Padding(0, 1).
+				Render(fmt.Sprintf("%s INTEL #%d", strings.ToUpper(h.HintType), h.HintIndex+1))
+
+			costTag := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF3860")).
+				Render(fmt.Sprintf("−%s PTS", formatPoints(h.CostPoints)))
+
+			clueText := lipgloss.NewStyle().
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("#30363D")).
+				Background(lipgloss.Color("#0D1117")).
+				Foreground(lipgloss.Color("#00FF9D")).
+				Padding(0, 1).
+				Width(cardW).
+				Render(h.Text)
+
+			b.WriteString(fmt.Sprintf("%s  %s\n%s\n", badge, costTag, clueText))
+			if i < len(m.unlockedHints)-1 {
+				b.WriteString("\n")
+			}
+		}
+	}
+
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#30363D")).
+		Background(lipgloss.Color("#161B22")).
+		Padding(1, 2).
+		Width(width).
+		Render(b.String())
+}
+
+func (m RequestHintModel) renderRoundHUD(width int) string {
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#0B0F19")).
+		Background(lipgloss.Color("#00F0FF")).
+		Padding(0, 1).
+		Render(" TACTICAL INTEL DOSSIER ")
+
+	maxTextW := width - 4
+	if maxTextW < 10 {
+		maxTextW = 10
+	}
+
+	var detail strings.Builder
+	selected := m.list.SelectedItem()
+	if it, ok := selected.(hintRoundItem); ok {
+		detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F0F6FC")).
+			Render("\nSelected Target: "+Truncate(it.title, maxTextW-16)) + "\n")
+		detail.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#FFB800")).
+			Render(fmt.Sprintf("Challenge Value: +%d PTS\n\n", it.points)))
+
+		// Fetch unlocked hints for highlighted round
+		unlocked, _ := m.svc.RoundUnlockedHints(m.team.ID, it.id)
+		if len(unlocked) > 0 {
+			detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF9D")).
+				Render(fmt.Sprintf("🔓 PREVIOUSLY UNLOCKED INTEL (%d):", len(unlocked))) + "\n")
+			for _, uh := range unlocked {
+				badge := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+					Background(lipgloss.Color("#00FF9D")).Padding(0, 1).
+					Render(fmt.Sprintf("%s #%d", strings.ToUpper(uh.HintType), uh.HintIndex+1))
+				cluePreview := lipgloss.NewStyle().Foreground(lipgloss.Color("#F0F6FC")).
+					Render(Truncate(uh.Text, maxTextW-14))
+				detail.WriteString(fmt.Sprintf(" • %s %s\n", badge, cluePreview))
+			}
+			detail.WriteString("\n")
+		} else {
+			detail.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).
+				Render("No intel unlocked yet for this target.\n\n"))
+		}
+
+		detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#58A6FF")).
+			Render("INTEL INVENTORY:") + "\n")
+		detail.WriteString(Truncate(fmt.Sprintf("• Plain Hints   : %d of %d remaining (−20%% cost)", it.plainLeft, it.plainTotal), maxTextW) + "\n")
+		detail.WriteString(Truncate(fmt.Sprintf("• Encoded Hints : %d of %d remaining (−10%% cost)", it.encLeft, it.encTotal), maxTextW) + "\n\n")
+	}
+
+	detail.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).
+		Render("Press [Enter] to browse intel or request next clue"))
+
+	return lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#30363D")).
+		Background(lipgloss.Color("#161B22")).
+		Padding(0, 1).
+		Width(width).
+		Render(title + detail.String())
+}
+
 func max0(n int) int {
 	if n < 0 {
 		return 0
 	}
 	return n
 }
+

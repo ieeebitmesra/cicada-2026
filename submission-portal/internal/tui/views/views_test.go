@@ -145,6 +145,18 @@ func TestRequestHintModel(t *testing.T) {
 	if !strings.Contains(v, "1. SELECT ROUND") || !strings.Contains(v, "Web Infiltration") {
 		t.Errorf("RequestHint View missing wizard steps or round: %s", v)
 	}
+
+	// Dispense hint and verify persistence after Refresh
+	_, _, err := svc.DirectRedeemHint(team, 1, "plain")
+	if err != nil {
+		t.Fatalf("DirectRedeemHint failed: %v", err)
+	}
+
+	_ = m.Refresh()
+	vAfter := m.View()
+	if !strings.Contains(vAfter, "INTEL") {
+		t.Errorf("RequestHint View missing unlocked intel indicator after refresh: %s", vAfter)
+	}
 }
 
 func TestSkipRoundModel(t *testing.T) {
@@ -181,13 +193,22 @@ func TestTeamStatusModel(t *testing.T) {
 	svc := newTestService(t, db)
 	team := mustCreateTeam(t, db, "StatusTeam")
 
+	// Unlock a hint first
+	_, _, err := svc.DirectRedeemHint(team, 1, "plain")
+	if err != nil {
+		t.Fatalf("DirectRedeemHint failed: %v", err)
+	}
+
 	m := NewTeamStatus(svc, team)
-	m.SetSize(100, 30)
+	m.SetSize(100, 60)
 	_ = m.Refresh()
 
 	v := m.View()
 	if !strings.Contains(v, "CHALLENGE ENGAGEMENT MATRIX") || !strings.Contains(v, "FINANCIAL BOUNTY LEDGER") {
 		t.Errorf("TeamStatus View missing matrix or ledger: %s", v)
+	}
+	if !strings.Contains(v, "UNLOCKED HINTS ARCHIVE") || !strings.Contains(v, "Check cookies") {
+		t.Errorf("TeamStatus View missing unlocked hint clue text: %s", v)
 	}
 }
 

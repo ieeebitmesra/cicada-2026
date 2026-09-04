@@ -405,6 +405,32 @@ func (m SubmitFlagModel) renderFlagInputTerminal() string {
 		Render("[Enter] Validate & Submit Flag  ") +
 		lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).Render("•  [Esc] Cancel & Return")
 
+	var intelSection string
+	unlocked, _ := m.svc.RoundUnlockedHints(m.team.ID, m.selected.ID)
+	if len(unlocked) > 0 {
+		var ib strings.Builder
+		ib.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFB800")).
+			Render("💡 UNLOCKED INTEL CLUES:") + "\n")
+		for _, uh := range unlocked {
+			badge := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+				Background(lipgloss.Color("#00FF9D")).Padding(0, 1).
+				Render(fmt.Sprintf("%s #%d", strings.ToUpper(uh.HintType), uh.HintIndex+1))
+			clue := lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF9D")).Render(uh.Text)
+			ib.WriteString(fmt.Sprintf("• %s %s\n", badge, clue))
+		}
+		intelCardW := m.width - 16
+		if intelCardW < 24 {
+			intelCardW = 24
+		}
+		intelSection = lipgloss.NewStyle().
+			Border(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("#30363D")).
+			Background(lipgloss.Color("#0D1117")).
+			Padding(0, 1).
+			Width(intelCardW).
+			Render(strings.TrimSpace(ib.String())) + "\n"
+	}
+
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#30363D")).
@@ -413,6 +439,7 @@ func (m SubmitFlagModel) renderFlagInputTerminal() string {
 		Render(lipgloss.JoinVertical(lipgloss.Left,
 			header,
 			targetStyled,
+			intelSection,
 			inputCard,
 			"",
 			advisory,
