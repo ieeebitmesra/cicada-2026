@@ -1,8 +1,10 @@
-version: '3.8'
-
 services:
   submission-portal:
-    build: ./submission-portal
+    image: cosmologyisfun/submission-portal:latest
+    build:
+      context: ./submission-portal
+      dockerfile: Dockerfile
+    container_name: ctf-submission-portal
     ports:
       - "2222:2222"
     volumes:
@@ -10,8 +12,11 @@ services:
       - ./submission-portal/configs:/app/configs:ro
     restart: unless-stopped
     environment:
-      - CTF_DB_PATH=/app/data/ctf.db
-      - CTF_HOST_KEY=/app/data/id_ed25519
+      CTF_DB_URL: "libsql://ctf-testifywebdev.aws-ap-south-1.turso.io"
+      CTF_DB_AUTH_TOKEN: "${CTF_DB_AUTH_TOKEN}"
+      TURSO_AUTH_TOKEN: "${CTF_DB_AUTH_TOKEN}"
+      CTF_DB_PATH: "/app/data/ctf.db"
+      CTF_HOST_KEY: "/app/data/id_ed25519"
     read_only: true
     tmpfs:
       - /tmp:noexec,nosuid,size=100m
