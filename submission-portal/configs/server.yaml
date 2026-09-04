@@ -8,6 +8,10 @@ server:
 database:
   path: "ctf.db"
 
+gameplay:
+  allow_hints: true    # set to false to restrict/disable all hints
+  allow_skips: true    # set to false to restrict/disable all round skips
+
 security:
   rate_limit:
     requests_per_second: 1.0       # per-IP token bucket refill

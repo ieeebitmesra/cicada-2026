@@ -1,0 +1,16 @@
+:{$HTTP_PORT:8080} {
+    root * /srv/public
+    file_server browse {
+        hide .git
+    }
+
+    @files path /crypto.py /challenge.py
+    header @files Content-Disposition "attachment; filename=crypto.py"
+    header @files Content-Type "text/plain; charset=utf-8"
+
+    header {
+        Access-Control-Allow-Origin *
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+    }
+}

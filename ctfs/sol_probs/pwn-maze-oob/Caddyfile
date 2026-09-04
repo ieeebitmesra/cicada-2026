@@ -1,0 +1,16 @@
+:{$HTTP_PORT:8080} {
+    root * /srv/public
+    file_server browse {
+        hide .git
+    }
+
+    @binaries path /maze /challenge
+    header @binaries Content-Disposition "attachment; filename=maze"
+    header @binaries Content-Type "application/octet-stream"
+
+    header {
+        Access-Control-Allow-Origin *
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+    }
+}

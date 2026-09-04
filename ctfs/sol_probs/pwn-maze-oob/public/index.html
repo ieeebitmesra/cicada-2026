@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANTHEON CTF // PWN: Maze OOB</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --border-color: #30363d;
+            --accent-color: #58a6ff;
+            --accent-hover: #1f6feb;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --code-bg: #090d13;
+            --success-color: #3fb950;
+            --warning-color: #d29922;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 680px;
+            width: 100%;
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+        .badge {
+            background-color: rgba(88, 166, 255, 0.15);
+            color: var(--accent-color);
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.85em;
+            font-weight: 600;
+            border: 1px solid rgba(88, 166, 255, 0.3);
+        }
+        h1 {
+            font-size: 1.6em;
+            color: #ffffff;
+            margin-bottom: 6px;
+        }
+        p.desc {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .action-box {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .action-title {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background-color: var(--accent-color);
+            color: #0d1117;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1em;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(88, 166, 255, 0.25);
+        }
+        .download-btn:hover {
+            background-color: var(--accent-hover);
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+        .code-snippet {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #000000;
+            padding: 12px 16px;
+            border-radius: 6px;
+            border: 1px solid #21262d;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 0.95em;
+            color: #58a6ff;
+            margin-top: 8px;
+        }
+        .copy-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.2s;
+        }
+        .copy-btn:hover {
+            color: #ffffff;
+            border-color: #8b949e;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 16px;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+        .info-item strong {
+            color: var(--text-primary);
+        }
+        .footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 0.8em;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <div>
+                <h1>The Daedalus Labyrinth</h1>
+                <div style="font-size: 0.85em; color: var(--text-secondary);">PANTHEON CTF // Binary Exploitation</div>
+            </div>
+            <span class="badge">PWN / OOB</span>
+        </div>
+
+        <p class="desc">
+            You are trapped in the labyrinth of Daedalus. A strange grid guards the divine secrets.
+            Can you exploit the memory boundary out-of-bounds corruption to reach the flag?
+        </p>
+
+        <div class="action-box">
+            <div class="action-title">Challenge Binary Executable</div>
+            <a href="/maze" class="download-btn" download="maze">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Download Binary (<code>maze</code>)
+            </a>
+            
+            <div class="info-grid">
+                <div class="info-item">Format: <strong>ELF 64-bit x86-64</strong></div>
+                <div class="info-item">Direct URI: <a href="/maze" style="color:var(--accent-color)">/maze</a></div>
+            </div>
+        </div>
+
+        <div class="action-box">
+            <div class="action-title">Remote Interactive Target</div>
+            <div class="code-snippet">
+                <span id="nc-cmd">nc &lt;host&gt; 5001</span>
+                <button class="copy-btn" onclick="copyNc()">Copy</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            Powered by <strong>Caddy Web Server</strong> &bull; PANTHEON CTF Platform
+        </div>
+    </div>
+
+    <script>
+        // Dynamically configure remote host
+        const host = window.location.hostname || 'localhost';
+        document.getElementById('nc-cmd').innerText = `nc ${host} 5001`;
+
+        function copyNc() {
+            const cmd = document.getElementById('nc-cmd').innerText;
+            navigator.clipboard.writeText(cmd).then(() => {
+                event.target.innerText = 'Copied!';
+                setTimeout(() => { event.target.innerText = 'Copy'; }, 1500);
+            });
+        }
+    </script>
+</body>
+</html>

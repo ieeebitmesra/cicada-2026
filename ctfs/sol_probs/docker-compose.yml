@@ -1,0 +1,74 @@
+services:
+  pwn-maze-oob:
+    build:
+      context: ./pwn-maze-oob
+      dockerfile: Dockerfile
+    image: pantheon-ctf/pwn-maze-oob:latest
+    container_name: ctf-pwn-maze-oob
+    ports:
+      - "5001:5000"
+      - "8001:8080"
+    restart: unless-stopped
+    read_only: false
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  pwn-stonks-fmt:
+    build:
+      context: ./pwn-stonks-fmt
+      dockerfile: Dockerfile
+    image: pantheon-ctf/pwn-stonks-fmt:latest
+    container_name: ctf-pwn-stonks-fmt
+    ports:
+      - "5002:5000"
+      - "8002:8080"
+    restart: unless-stopped
+    read_only: false
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  crypto-sphinx-oracle:
+    build:
+      context: ./crypto-sphinx-oracle
+      dockerfile: Dockerfile
+    image: pantheon-ctf/crypto-sphinx-oracle:latest
+    container_name: ctf-crypto-sphinx-oracle
+    ports:
+      - "5003:5000"
+      - "8003:8080"
+    restart: unless-stopped
+    read_only: false
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  web-global-megaphone:
+    build:
+      context: ./web-global-megaphone
+      dockerfile: Dockerfile
+    image: pantheon-ctf/web-global-megaphone:latest
+    container_name: ctf-web-global-megaphone
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+
+  web-secure-portal:
+    build:
+      context: ./web-secure-portal
+      dockerfile: Dockerfile
+    image: pantheon-ctf/web-secure-portal:latest
+    container_name: ctf-web-secure-portal
+    ports:
+      - "8082:8080"
+    restart: unless-stopped
+    read_only: true
+    security_opt:
+      - no-new-privileges:true

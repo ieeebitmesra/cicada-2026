@@ -76,19 +76,61 @@ type HintDef struct {
 
 // RoundDef is one round as defined in rounds.yaml.
 type RoundDef struct {
-	ID       int       `yaml:"id"`
-	Name     string    `yaml:"name"`
-	Points   int       `yaml:"points"`
-	IsActive bool      `yaml:"is_active"`
-	FlagHash string    `yaml:"flag_hash"`
-	Hints    []HintDef `yaml:"hints"`
+	ID         int       `yaml:"id"`
+	Name       string    `yaml:"name"`
+	Points     int       `yaml:"points"`
+	IsActive   bool      `yaml:"is_active"`
+	FlagHash   string    `yaml:"flag_hash"`
+	AllowHints *bool     `yaml:"allow_hints,omitempty"`
+	AllowSkips *bool     `yaml:"allow_skips,omitempty"`
+	Hints      []HintDef `yaml:"hints"`
 }
 
 // RoundsConfig is the parsed rounds.yaml document.
 type RoundsConfig struct {
-	Rounds []RoundDef `yaml:"rounds"`
+	AllowHints *bool      `yaml:"allow_hints,omitempty"`
+	AllowSkips *bool      `yaml:"allow_skips,omitempty"`
+	Rounds     []RoundDef `yaml:"rounds"`
 
 	byID map[int]*RoundDef
+}
+
+// HintsAllowed returns whether hints are permitted for the given round (or globally).
+func (rc *RoundsConfig) HintsAllowed(roundID int) bool {
+	if rc == nil {
+		return true
+	}
+	if rc.AllowHints != nil && !*rc.AllowHints {
+		return false
+	}
+	if roundID > 0 {
+		if d := rc.Def(roundID); d != nil && d.AllowHints != nil {
+			return *d.AllowHints
+		}
+	}
+	if rc.AllowHints != nil {
+		return *rc.AllowHints
+	}
+	return true
+}
+
+// SkipsAllowed returns whether skips are permitted for the given round (or globally).
+func (rc *RoundsConfig) SkipsAllowed(roundID int) bool {
+	if rc == nil {
+		return true
+	}
+	if rc.AllowSkips != nil && !*rc.AllowSkips {
+		return false
+	}
+	if roundID > 0 {
+		if d := rc.Def(roundID); d != nil && d.AllowSkips != nil {
+			return *d.AllowSkips
+		}
+	}
+	if rc.AllowSkips != nil {
+		return *rc.AllowSkips
+	}
+	return true
 }
 
 // Def returns the definition for a round id (nil if unknown).

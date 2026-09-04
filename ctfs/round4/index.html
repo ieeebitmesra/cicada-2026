@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANTHEON // Round 4: The Seeker's Vault</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="vault-container">
+        <div class="vault-header">
+            <div class="brand-title">
+                <span>PANTHEON</span> // NODE 04
+            </div>
+            <div class="status-badge" id="system-status">● VAULT ACTIVE</div>
+        </div>
+
+        <div class="vault-body">
+            <p class="instructions">
+                <strong>SECURE ARCHIVE ACCESS:</strong> Enter the 36-digit authorization sequence to decrypt and unlock <strong>The Seeker's Challenge Package (ZIP)</strong>.
+            </p>
+
+            <form id="vault-form" onsubmit="event.preventDefault(); window._0x_auth();">
+                <div class="input-wrapper">
+                    <label class="input-label" for="auth-input">Authorization Key Sequence</label>
+                    <div class="code-input-box">
+                        <input 
+                            type="text" 
+                            id="auth-input" 
+                            class="code-input" 
+                            placeholder="ENTER 36-DIGIT PASSCODE" 
+                            autocomplete="off" 
+                            spellcheck="false"
+                            maxlength="48"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-submit" class="btn-unlock">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    AUTHORIZE &amp; DECRYPT ARCHIVE
+                </button>
+            </form>
+
+            <div class="terminal-window">
+                <div class="terminal-bar">
+                    <div class="terminal-dots">
+                        <span class="dot dot-red"></span>
+                        <span class="dot dot-yellow"></span>
+                        <span class="dot dot-green"></span>
+                    </div>
+                    <span>pantheon://vault-04/console</span>
+                </div>
+                <div class="terminal-log" id="terminal-log">
+                    <div class="log-entry log-info">[04-09-2026 23:10:01] Cryptographic subsystem initialized.</div>
+                    <div class="log-entry log-info">[04-09-2026 23:10:01] Awaiting authorization input sequence...</div>
+                </div>
+            </div>
+
+            <div id="download-card" class="download-card">
+                <div style="font-weight: 700; color: #10b981; margin-bottom: 4px;">✔ ARCHIVE DECRYPTED SUCCESSFULLY</div>
+                <div style="font-size: 0.85em; color: #94a3b8; margin-bottom: 12px;">Payload verified: <code>round4_challenge.zip</code> (774 bytes)</div>
+                <a id="download-btn" href="#" class="download-link" download="round4_challenge.zip">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    Download <code>round4_challenge.zip</code>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

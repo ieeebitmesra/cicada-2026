@@ -183,6 +183,9 @@ func (m *SkipRoundModel) Refresh() tea.Cmd {
 		if solved || skipped {
 			continue
 		}
+		if !m.svc.Rounds.SkipsAllowed(r.ID) {
+			continue
+		}
 		penalty := scoring.SkipCost(r.Points)
 		items = append(items, skipItem{
 			id:      r.ID,
@@ -358,6 +361,29 @@ func (m SkipRoundModel) View() string {
 	wizard := m.renderWizardBar()
 
 	var body string
+	if !m.svc.Rounds.SkipsAllowed(0) {
+		body = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#FF3860")).
+			Background(lipgloss.Color("#161B22")).
+			Padding(2, 3).
+			Width(w - 6).
+			Render(lipgloss.JoinVertical(lipgloss.Left,
+				lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+					Background(lipgloss.Color("#FF3860")).Padding(0, 1).Render(" ⛔ ROUND SKIPS RESTRICTED "),
+				"\n"+lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F0F6FC")).
+					Render("Strategic round bypass (skipping) has been disabled by competition organizers."),
+				lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).
+					Render("All challenges must be solved directly without point-forfeiture bypasses."),
+				"\n"+lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00F0FF")).
+					Render("Press [Esc] to return to Dashboard."),
+			))
+		return lipgloss.NewStyle().
+			Width(m.width).
+			Padding(1, 2).
+			Render(lipgloss.JoinVertical(lipgloss.Left, wizard, "\n", body))
+	}
+
 	switch m.phase {
 	case skipPhaseSelect:
 		if len(m.list.Items()) == 0 {

@@ -1,5 +1,11 @@
 # configs/rounds.yaml — Round definitions for the IEEE CTF.
 #
+# Feature flags (global toggles):
+# Set allow_hints: false to restrict/disable hints across all rounds.
+# Set allow_skips: false to restrict/disable round skipping across all rounds.
+allow_hints: false
+allow_skips: false
+
 # flag_hash is the SHA-256 hex digest of the exact flag string (case-sensitive).
 # Generate it with:
 #
@@ -15,6 +21,8 @@ rounds:
     name: "Round 1 — Warmup"
     points: 100
     is_active: true
+    allow_hints: true
+    allow_skips: true
     flag_hash: "REPLACE_WITH_SHA256_HEX"
     hints:
       - type: plain
@@ -26,6 +34,8 @@ rounds:
     name: "Round 2 — Crypto Basics"
     points: 150
     is_active: true
+    allow_hints: true
+    allow_skips: true
     flag_hash: "REPLACE_WITH_SHA256_HEX"
     hints:
       - type: plain
@@ -37,6 +47,8 @@ rounds:
     name: "Round 3 — Web Recon"
     points: 200
     is_active: true
+    allow_hints: true
+    allow_skips: true
     flag_hash: "REPLACE_WITH_SHA256_HEX"
     hints:
       - type: plain
@@ -48,6 +60,8 @@ rounds:
     name: "Round 4 — The Seeker's Files"
     points: 300
     is_active: true
+    allow_hints: false
+    allow_skips: false
     flag_hash: "REPLACE_WITH_SHA256_HEX"
     hints:
       - type: plain

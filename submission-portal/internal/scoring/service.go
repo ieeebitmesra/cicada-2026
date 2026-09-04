@@ -14,9 +14,11 @@ import (
 
 // ErrRoundInactive / ErrNotRegistered are game-flow guards.
 var (
-	ErrRoundInactive  = errors.New("round is not active")
-	ErrAlreadySkipped = errors.New("round already skipped")
-	ErrSolvedNoSkip   = errors.New("round already solved — nothing to skip")
+	ErrRoundInactive   = errors.New("round is not active")
+	ErrAlreadySkipped  = errors.New("round already skipped")
+	ErrSolvedNoSkip    = errors.New("round already solved — nothing to skip")
+	ErrHintsRestricted = errors.New("hints are restricted for this competition")
+	ErrSkipsRestricted = errors.New("round skipping is restricted for this competition")
 )
 
 // Service wires the store, rounds config and validators into game operations.
@@ -102,6 +104,10 @@ func (s *Service) NextHintIndex(teamID int64, roundID int, hintType string) (int
 
 // HintChallenge issues a challenge for the next available hint of a type.
 func (s *Service) HintChallenge(team *models.Team, roundID int, hintType string) (challenge string, index int, cost float64, err error) {
+	if !s.Rounds.HintsAllowed(roundID) {
+		return "", 0, 0, ErrHintsRestricted
+	}
+
 	// FIX SEC-13: Validate round is active in database
 	dbRound, err := s.DB.GetRound(roundID)
 	if err != nil || !dbRound.IsActive {
@@ -125,6 +131,9 @@ func (s *Service) HintChallenge(team *models.Team, roundID int, hintType string)
 
 // RedeemHint verifies the clearsigned proof and dispenses hint text.
 func (s *Service) RedeemHint(team *models.Team, roundID int, hintType string, signed string) (text string, cost float64, err error) {
+	if !s.Rounds.HintsAllowed(roundID) {
+		return "", 0, ErrHintsRestricted
+	}
 	if len(signed) > 8192 {
 		return "", 0, errors.New("PGP message too long")
 	}
@@ -163,6 +172,9 @@ func (s *Service) RedeemHint(team *models.Team, roundID int, hintType string, si
 
 // DirectRedeemHint dispenses a hint after password-based confirmation (no PGP).
 func (s *Service) DirectRedeemHint(team *models.Team, roundID int, hintType string) (text string, cost float64, err error) {
+	if !s.Rounds.HintsAllowed(roundID) {
+		return "", 0, ErrHintsRestricted
+	}
 	// Validate round is active in database
 	dbRound, err := s.DB.GetRound(roundID)
 	if err != nil || !dbRound.IsActive {
@@ -190,6 +202,9 @@ func (s *Service) DirectRedeemHint(team *models.Team, roundID int, hintType stri
 
 // PreviewSkipCost computes what skipping a round would cost right now.
 func (s *Service) PreviewSkipCost(teamID int64, roundID int) (float64, error) {
+	if !s.Rounds.SkipsAllowed(roundID) {
+		return 0, ErrSkipsRestricted
+	}
 	round := s.Rounds.Def(roundID)
 	if round == nil {
 		return 0, ErrRoundInactive
@@ -199,6 +214,9 @@ func (s *Service) PreviewSkipCost(teamID int64, roundID int) (float64, error) {
 
 // SkipChallenge generates the challenge string for skipping a round with PGP verification.
 func (s *Service) SkipChallenge(team *models.Team, roundID int) (challenge string, cost float64, err error) {
+	if !s.Rounds.SkipsAllowed(roundID) {
+		return "", 0, ErrSkipsRestricted
+	}
 	dbRound, err := s.DB.GetRound(roundID)
 	if err != nil || !dbRound.IsActive {
 		return "", 0, ErrRoundInactive
@@ -229,6 +247,9 @@ func (s *Service) SkipChallenge(team *models.Team, roundID int) (challenge strin
 
 // ExecuteSkip verifies the clearsigned PGP challenge and applies the skip forfeiture penalty.
 func (s *Service) ExecuteSkip(team *models.Team, roundID int, signed string) (cost float64, err error) {
+	if !s.Rounds.SkipsAllowed(roundID) {
+		return 0, ErrSkipsRestricted
+	}
 	if len(signed) > 8192 {
 		return 0, errors.New("PGP message too long")
 	}
@@ -251,6 +272,9 @@ func (s *Service) ExecuteSkip(team *models.Team, roundID int, signed string) (co
 
 // SkipRound applies the skip penalty directly (used internally or by admin/tests).
 func (s *Service) SkipRound(team *models.Team, roundID int) (cost float64, err error) {
+	if !s.Rounds.SkipsAllowed(roundID) {
+		return 0, ErrSkipsRestricted
+	}
 	round := s.Rounds.Def(roundID)
 	if round == nil {
 		return 0, ErrRoundInactive

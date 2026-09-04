@@ -47,6 +47,11 @@ type Config struct {
 		} `yaml:"input"`
 	} `yaml:"security"`
 
+	Gameplay struct {
+		AllowHints *bool `yaml:"allow_hints"`
+		AllowSkips *bool `yaml:"allow_skips"`
+	} `yaml:"gameplay"`
+
 	Hints struct {
 		ChallengeValidityMinutes int `yaml:"challenge_validity_minutes"`
 	} `yaml:"hints"`

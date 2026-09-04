@@ -52,7 +52,7 @@ func main() {
 	http.HandleFunc("/register", registerHandler)
 	http.HandleFunc("/login", loginHandler)
 
-	fmt.Println("[*] Deceptive CTF Challenge running on http://localhost:8080")
+	fmt.Println("[*] Deceptive CTF Challenge running on http://0.0.0.0:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 

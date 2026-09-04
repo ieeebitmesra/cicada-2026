@@ -40,6 +40,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("load rounds: %v", err)
 	}
+	if cfg.Gameplay.AllowHints != nil && roundsCfg.AllowHints == nil {
+		roundsCfg.AllowHints = cfg.Gameplay.AllowHints
+	}
+	if cfg.Gameplay.AllowSkips != nil && roundsCfg.AllowSkips == nil {
+		roundsCfg.AllowSkips = cfg.Gameplay.AllowSkips
+	}
 	if err := db.UpsertRounds(roundsCfg.Rounds); err != nil {
 		log.Fatalf("sync rounds: %v", err)
 	}
