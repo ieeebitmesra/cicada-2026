@@ -1,0 +1,33 @@
+================================================================
+CHALLENGE: The Mystery of the Sphinx's Offering
+================================================================
+
+--- HINTS ---
+
+HINT 1: 
+You are dealing with an "Encryption Oracle." This means you can feed the program whatever text you want and see how it encrypts it. Try giving the Sphinx a very simple string, like a bunch of "A"s (e.g., AAAAAAAA), and see what comes out.
+
+HINT 2: 
+If you encrypt "AAAAAAAA", the program spits out "ZEUSZEUS". Because "A" represents a shift of zero in cryptography, the Oracle is accidentally revealing its secret repeating key! This is a Vigenère Cipher, and the key is "ZEUS".
+
+HINT 3: 
+Now that you have the ciphertext (NPSEOMUFMILZV) and the secret key (ZEUS), head over to a site like CyberChef or dcode.fr and use a Vigenère Decoder to find the plaintext offering.
+
+
+--- SOLUTION ---
+
+ANSWER (The Secret Offering): 
+OLYMPIANNECTAR
+
+THE FLAG: 
+PANTHEON{Cr4ck1ng_Th3_0lymp14n_0r4cl3}
+
+----------------------------------------------------------------
+HOW TO SOLVE (STEP-BY-STEP):
+1. Connect to the program and observe the encrypted offering: NPSEOMUFMILZV
+2. Choose (e) to encrypt a custom offering. 
+3. Input a string of A's: AAAAA
+4. The program outputs ZEUSZ, revealing that this is a Vigenere cipher using the key "ZEUS".
+5. Use a Vigenere decryption tool to decrypt NPSEOMUFMILZV with the key ZEUS.
+6. The resulting plaintext is OLYMPIANNECTAR.
+7. Relaunch the program, choose (g) to guess, and input OLYMPIANNECTAR to get the flag.
