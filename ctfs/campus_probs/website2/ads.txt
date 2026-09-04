@@ -8,4 +8,5 @@ northstar.example, pub-61029384, RESELLER, 74ab93e10c8f22d1
 archive.meridian.example, pub-39017264, DIRECT, 18f4c6a2d9b70e31
 
 # Internal reference token
-PANTHEON{paper_moon_8k2v_north}
+PANTHEON{m1x3d_v3g_1s_g04t3d}
+
