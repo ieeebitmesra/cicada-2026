@@ -6,7 +6,10 @@ server:
   host_key_path: ".ssh/id_ed25519"   # auto-generated on first start if missing
 
 database:
-  path: "ctf.db"
+  url: "libsql://ctf-testifywebdev.aws-ap-south-1.turso.io"
+  auth_token: ""   # Leave empty to load from CTF_DB_AUTH_TOKEN / TURSO_AUTH_TOKEN env var
+  path: "ctf.db"   # Fallback local SQLite path
+  migrations_dir: "migrations"
 
 gameplay:
   allow_hints: true    # set to false to restrict/disable all hints

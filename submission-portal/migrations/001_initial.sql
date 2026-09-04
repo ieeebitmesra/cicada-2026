@@ -1,8 +1,5 @@
 -- 001_initial.sql — initial schema for the IEEE CTF submission portal
 
-PRAGMA journal_mode=WAL;
-PRAGMA busy_timeout=5000;
-
 CREATE TABLE teams (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     name        TEXT    UNIQUE NOT NULL,

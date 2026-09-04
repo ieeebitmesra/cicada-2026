@@ -71,9 +71,37 @@ func main() {
 
 // openDB opens + migrates the database for commands that need it.
 func openDB() (*store.DB, func(), error) {
-	dbPath := envOr("CTF_DB_PATH", "ctf.db")
-	migDir := envOr("CTF_MIGRATIONS", "migrations")
-	db, err := store.Open(dbPath)
+	cfgPath := envOr("CTF_CONFIG", "configs/server.yaml")
+	var target, token, migDir string
+
+	if cfg, err := server.Load(cfgPath); err == nil {
+		target, token = cfg.DatabaseTarget()
+		migDir = cfg.Database.MigrationsDir
+	}
+
+	if v := os.Getenv("CTF_DB_URL"); v != "" {
+		target = v
+	} else if v := os.Getenv("TURSO_DATABASE_URL"); v != "" {
+		target = v
+	}
+	if v := os.Getenv("CTF_DB_AUTH_TOKEN"); v != "" {
+		token = v
+	} else if v := os.Getenv("TURSO_AUTH_TOKEN"); v != "" {
+		token = v
+	} else if v := os.Getenv("LIBSQL_AUTH_TOKEN"); v != "" {
+		token = v
+	}
+	if v := os.Getenv("CTF_DB_PATH"); v != "" && target == "" {
+		target = v
+	}
+	if target == "" {
+		target = "ctf.db"
+	}
+	if migDir == "" {
+		migDir = envOr("CTF_MIGRATIONS", "migrations")
+	}
+
+	db, err := store.OpenWithAuth(target, token)
 	if err != nil {
 		return nil, nil, err
 	}

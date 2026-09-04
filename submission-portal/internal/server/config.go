@@ -19,6 +19,8 @@ type Config struct {
 	} `yaml:"server"`
 
 	Database struct {
+		URL           string `yaml:"url"`
+		AuthToken     string `yaml:"auth_token"`
 		Path          string `yaml:"path"`
 		MigrationsDir string `yaml:"migrations_dir"`
 	} `yaml:"database"`
@@ -71,7 +73,19 @@ func Load(path string) (*Config, error) {
 	}
 	applyDefaults(cfg)
 
-	// Environment overrides (used by docker-compose).
+	// Environment overrides.
+	if v := os.Getenv("CTF_DB_URL"); v != "" {
+		cfg.Database.URL = v
+	} else if v := os.Getenv("TURSO_DATABASE_URL"); v != "" {
+		cfg.Database.URL = v
+	}
+	if v := os.Getenv("CTF_DB_AUTH_TOKEN"); v != "" {
+		cfg.Database.AuthToken = v
+	} else if v := os.Getenv("TURSO_AUTH_TOKEN"); v != "" {
+		cfg.Database.AuthToken = v
+	} else if v := os.Getenv("LIBSQL_AUTH_TOKEN"); v != "" {
+		cfg.Database.AuthToken = v
+	}
 	if v := os.Getenv("CTF_DB_PATH"); v != "" {
 		cfg.Database.Path = v
 	}
@@ -79,6 +93,14 @@ func Load(path string) (*Config, error) {
 		cfg.Server.HostKeyPath = v
 	}
 	return cfg, nil
+}
+
+// DatabaseTarget returns the configured database URL/path and authentication token.
+func (c *Config) DatabaseTarget() (string, string) {
+	if c.Database.URL != "" {
+		return c.Database.URL, c.Database.AuthToken
+	}
+	return c.Database.Path, c.Database.AuthToken
 }
 
 func applyDefaults(cfg *Config) {

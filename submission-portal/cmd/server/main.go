@@ -25,7 +25,8 @@ func main() {
 		log.Fatalf("load config: %v", err)
 	}
 
-	db := store.MustOpen(cfg.Database.Path)
+	dbTarget, dbAuth := cfg.DatabaseTarget()
+	db := store.MustOpenWithAuth(dbTarget, dbAuth)
 	defer db.Close()
 
 	if err := db.Migrate(cfg.Database.MigrationsDir); err != nil {

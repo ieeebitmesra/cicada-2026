@@ -23,7 +23,7 @@ rounds:
     is_active: true
     allow_hints: true
     allow_skips: true
-    flag_hash: "REPLACE_WITH_SHA256_HEX"
+    flag_hash: "2574da35e604fe70836157593d6171013b11042c231c5245ee9682f1a57335c2"
     hints:
       - type: plain
         text: "Start by looking at the metadata of the provided file."
