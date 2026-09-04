@@ -27,6 +27,8 @@ Usage:
 
   admin rounds list
   admin rounds set-active --round N --active true|false
+  admin rounds set-flag   --round N --flag 'PANTHEON{...}'
+  admin rounds set-flag-hash --round N --hash 'sha256_hex...'
   admin rounds load    --file configs/rounds.yaml
   admin rounds hash-flag --flag 'PANTHEON{...}'
 
@@ -318,6 +320,33 @@ func cmdRounds(args []string) error {
 			return err
 		}
 		fmt.Printf("round %d active=%v\n", *id, *active)
+
+	case "set-flag":
+		fs := newFlagSet("rounds set-flag")
+		id := fs.Int("round", 0, "round id")
+		fl := fs.String("flag", "", "the plaintext flag")
+		fs.Parse(rest)
+		if *id == 0 || *fl == "" {
+			return fmt.Errorf("--round and --flag are required")
+		}
+		hash := scoring.HashFlag(*fl)
+		if err := db.SetRoundFlagHash(*id, hash); err != nil {
+			return err
+		}
+		fmt.Printf("round %d flag hash updated to %s\n", *id, hash)
+
+	case "set-flag-hash":
+		fs := newFlagSet("rounds set-flag-hash")
+		id := fs.Int("round", 0, "round id")
+		hash := fs.String("hash", "", "sha256 flag hash")
+		fs.Parse(rest)
+		if *id == 0 || *hash == "" {
+			return fmt.Errorf("--round and --hash are required")
+		}
+		if err := db.SetRoundFlagHash(*id, *hash); err != nil {
+			return err
+		}
+		fmt.Printf("round %d flag hash updated to %s\n", *id, *hash)
 
 	case "load":
 		fs := newFlagSet("rounds load")

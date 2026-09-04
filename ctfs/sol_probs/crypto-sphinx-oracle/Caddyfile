@@ -4,9 +4,13 @@
         hide .git
     }
 
-    @files path /crypto.py /challenge.py
-    header @files Content-Disposition "attachment; filename=crypto.py"
-    header @files Content-Type "text/plain; charset=utf-8"
+    @binaries path /challenge /crypto /challenge.exe /crypto.exe
+    header @binaries Content-Disposition "attachment; filename=challenge"
+    header @binaries Content-Type "application/octet-stream"
+
+    @sources path /crypto.py /challenge.py
+    header @sources Content-Disposition "attachment; filename=crypto.py"
+    header @sources Content-Type "text/plain; charset=utf-8"
 
     header {
         Access-Control-Allow-Origin *

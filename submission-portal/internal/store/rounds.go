@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"strings"
 
 	"ieee-ctf/internal/models"
 )
@@ -24,8 +25,7 @@ func (db *DB) UpsertRounds(defs []models.RoundDef) error {
 			ON CONFLICT(id) DO UPDATE SET
 				name = excluded.name,
 				points = excluded.points,
-				flag_hash = excluded.flag_hash,
-				is_active = excluded.is_active,
+				flag_hash = CASE WHEN rounds.flag_hash = '' OR rounds.flag_hash IS NULL THEN excluded.flag_hash ELSE rounds.flag_hash END,
 				sort_order = excluded.sort_order`,
 			d.ID, d.Name, d.Points, d.FlagHash, active, i)
 		if err != nil {
@@ -34,6 +34,19 @@ func (db *DB) UpsertRounds(defs []models.RoundDef) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// SetRoundFlagHash updates a round's correct flag hash in the database.
+func (db *DB) SetRoundFlagHash(id int, hash string) error {
+	res, err := db.Exec(`UPDATE rounds SET flag_hash = ? WHERE id = ?`, strings.ToLower(strings.TrimSpace(hash)), id)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 // GetRound fetches one round by ID.

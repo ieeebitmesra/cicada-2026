@@ -1,4 +1,22 @@
-# Dockerfile for crypto-sphinx-oracle challenge with Caddy delivery
+# Multi-stage Dockerfile: PyInstaller build + hardened Caddy & Socat delivery
+FROM python:3.11-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    binutils \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir pyinstaller
+
+WORKDIR /build
+COPY crypto.py .
+
+RUN pyinstaller --onefile --name challenge crypto.py && \
+    cp dist/challenge /build/challenge && \
+    cp dist/challenge /build/crypto && \
+    cp dist/challenge /build/challenge.exe
+
+# Runtime Stage
 FROM python:3.11-slim
 
 ENV CADDY_NO_CAP_SYS_RESOURCE=1
@@ -17,15 +35,17 @@ RUN cat /tmp/caddy_raw > /usr/bin/caddy && \
 
 # Setup challenge runtime
 WORKDIR /home/ctf
-COPY crypto.py ./challenge.py
-RUN chown -R ctf:ctf /home/ctf && \
-    chmod 755 /home/ctf/challenge.py
+COPY --from=builder /build/challenge ./challenge
+RUN chown -R root:ctf /home/ctf && \
+    chmod 750 /home/ctf/challenge
 
 # Setup Caddy file delivery
 WORKDIR /srv/public
 COPY public/index.html ./index.html
+COPY --from=builder /build/challenge ./challenge
+COPY --from=builder /build/crypto ./crypto
+COPY --from=builder /build/challenge.exe ./challenge.exe
 COPY crypto.py ./crypto.py
-COPY crypto.py ./challenge.py
 COPY Caddyfile /etc/caddy/Caddyfile
 RUN chmod -R 755 /srv/public
 

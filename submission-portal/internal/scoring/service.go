@@ -73,8 +73,14 @@ func (s *Service) SubmitFlag(team *models.Team, roundID int, raw string) (*Submi
 		return nil, ErrAlreadySkipped
 	}
 
-	// FIX SEC-11: Constant-time hash comparison
-	expectedHash := strings.ToLower(round.FlagHash)
+	// Validate flag hash against the live database record (dbRound)
+	expectedHash := strings.ToLower(strings.TrimSpace(dbRound.FlagHash))
+	if expectedHash == "" {
+		round := s.Rounds.Def(roundID)
+		if round != nil {
+			expectedHash = strings.ToLower(strings.TrimSpace(round.FlagHash))
+		}
+	}
 	actualHash := HashFlag(flag)
 	correct := subtle.ConstantTimeCompare([]byte(actualHash), []byte(expectedHash)) == 1
 

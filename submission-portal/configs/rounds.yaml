@@ -31,12 +31,12 @@ rounds:
         text: "VGhlIGFuc3dlciBpcyBoaWRkZW4gaW4gcGxhaW4gc2lnaHQu"
 
   - id: 2
-    name: "Round 2 — Crypto Basics"
+    name: "Round 2 — Crack it if you can"
     points: 150
     is_active: true
     allow_hints: true
     allow_skips: true
-    flag_hash: "REPLACE_WITH_SHA256_HEX"
+    flag_hash: "2fb64ebc726bc0188f1abea53539644e984fdfc1ae944cc770debaaef52485da"
     hints:
       - type: plain
         text: "The cipher dates back to Rome."
@@ -44,7 +44,7 @@ rounds:
         text: "PNZFR VF ABG FRphevgl."
 
   - id: 3
-    name: "Round 3 — Web Recon"
+    name: "Round 3 — "
     points: 200
     is_active: true
     allow_hints: true
