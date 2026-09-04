@@ -1,0 +1,5 @@
+Hint 1: The server is using a template engine to render your input, and there is a secret variable you want to print. However, the server is actively searching for the exact name of that variable to delete it from your input.
+
+Hint 2: The sanitization filter is lazy—it is not recursive. It only scans your input and deletes the forbidden word exactly one time before passing the rest to the template engine. What happens to the surrounding letters when that middle piece is ripped out?
+
+Hint 3: Try building a "Russian nesting doll" payload. If you split the banned word in half and stuff a complete version of the banned word directly inside it, what exact string will be left behind to execute after the filter does its single sweep?

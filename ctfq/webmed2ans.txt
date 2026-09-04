@@ -1,0 +1,5 @@
+Hint 1: The entire /login page, including the "quantum" errors and the SQL queries you might imagine are running, is a massive decoy designed to waste your time. No matter what password you enter, that door is bricked shut.
+
+Hint 2: How does the server know who you are after you register? Open your browser's Developer Tools and look at your stored Cookies. You will see an auth_token that ends in an equals sign (=), which is a huge giveaway for a specific type of encoding.
+
+Hint 3: Decode that token, and you will see your username tied to a specific privilege level. If you change that level, re-encode it, and update your cookie, you can bypass the broken login page entirely by just navigating straight to the main dashboard (/).
