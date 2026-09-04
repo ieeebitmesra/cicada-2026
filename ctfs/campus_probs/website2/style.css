@@ -1,0 +1,364 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --bg: #f2f3ef;
+    --surface: #ffffff;
+    --text: #151817;
+    --muted: #6d7471;
+    --line: #d9ddda;
+    --accent: #557a36;
+    --soft: #e7ebdf;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Manrope", sans-serif;
+    line-height: 1.6;
+}
+
+.topbar {
+    height: 78px;
+    padding: 0 clamp(24px, 7vw, 110px);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(242,243,239,.92);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-mark {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #8b938f;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.brand-name {
+    display: block;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .18em;
+}
+
+.brand-sub {
+    display: block;
+    font-family: "DM Mono", monospace;
+    font-size: 8px;
+    color: var(--muted);
+    letter-spacing: .1em;
+}
+
+.top-status {
+    font-family: "DM Mono", monospace;
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: .1em;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+}
+
+main {
+    max-width: 1280px;
+    margin: auto;
+    padding: 0 clamp(24px, 7vw, 110px);
+}
+
+.hero {
+    min-height: 520px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    gap: 40px;
+}
+
+.eyebrow {
+    display: block;
+    margin-bottom: 15px;
+    color: var(--accent);
+    font-family: "DM Mono", monospace;
+    font-size: 9px;
+    letter-spacing: .15em;
+}
+
+h1 {
+    font-size: clamp(52px, 7vw, 88px);
+    line-height: 1;
+    letter-spacing: -.06em;
+    font-weight: 700;
+}
+
+h1 span {
+    color: #858b87;
+}
+
+.hero p {
+    max-width: 530px;
+    margin-top: 28px;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.hero-number {
+    color: #dfe3dc;
+    font-size: clamp(130px, 20vw, 270px);
+    line-height: .8;
+    letter-spacing: -.1em;
+    font-weight: 800;
+    user-select: none;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-bottom: 1px solid var(--line);
+}
+
+.stats > div {
+    padding: 28px 20px;
+    border-right: 1px solid var(--line);
+}
+
+.stats > div:first-child {
+    padding-left: 0;
+}
+
+.stats > div:last-child {
+    border-right: 0;
+}
+
+.label {
+    display: block;
+    color: var(--muted);
+    font-family: "DM Mono", monospace;
+    font-size: 8px;
+    letter-spacing: .12em;
+    margin-bottom: 7px;
+}
+
+.stats strong {
+    font-size: 17px;
+    letter-spacing: -.02em;
+}
+
+.green {
+    color: var(--accent);
+}
+
+.content {
+    padding: 105px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.section-title {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    margin-bottom: 42px;
+}
+
+h2 {
+    font-size: clamp(30px, 4vw, 48px);
+    letter-spacing: -.045em;
+    line-height: 1;
+}
+
+.notes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+.note {
+    min-height: 300px;
+    padding: 25px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.note:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(25,30,27,.06);
+}
+
+.note-top {
+    display: flex;
+    justify-content: space-between;
+    color: #8a918e;
+    font-family: "DM Mono", monospace;
+    font-size: 9px;
+    letter-spacing: .05em;
+}
+
+.note h3 {
+    margin: 48px 0 14px;
+    font-size: 18px;
+    line-height: 1.3;
+}
+
+.note p {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.8;
+}
+
+.tag {
+    display: inline-block;
+    margin-top: 22px;
+    padding: 5px 8px;
+    background: var(--soft);
+    color: var(--accent);
+    font-family: "DM Mono", monospace;
+    font-size: 8px;
+    letter-spacing: .08em;
+}
+
+.quote {
+    padding: 95px 10%;
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 25px;
+    border-bottom: 1px solid var(--line);
+}
+
+.quote-mark {
+    color: var(--accent);
+    font-size: 90px;
+    line-height: .7;
+}
+
+.quote p {
+    max-width: 800px;
+    font-size: clamp(22px, 3vw, 34px);
+    line-height: 1.3;
+    letter-spacing: -.025em;
+}
+
+.quote span {
+    display: block;
+    margin-top: 24px;
+    color: var(--muted);
+    font-family: "DM Mono", monospace;
+    font-size: 9px;
+    letter-spacing: .1em;
+}
+
+.directory {
+    padding: 105px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 100px;
+}
+
+.directory-list {
+    border-top: 1px solid var(--line);
+}
+
+.directory-list div {
+    padding: 15px 0;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    font-family: "DM Mono", monospace;
+    font-size: 10px;
+}
+
+.directory-list b {
+    color: var(--accent);
+    font-weight: 500;
+}
+
+footer {
+    max-width: 1280px;
+    margin: auto;
+    padding: 28px clamp(24px, 7vw, 110px);
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    color: #737a77;
+    font-family: "DM Mono", monospace;
+    font-size: 8px;
+}
+
+footer strong {
+    color: #3e4642;
+    margin-right: 10px;
+}
+
+@media (max-width: 800px) {
+    .topbar {
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+
+    .top-status {
+        display: none;
+    }
+
+    .hero {
+        min-height: 560px;
+    }
+
+    .hero-number {
+        display: none;
+    }
+
+    .stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stats > div:nth-child(2) {
+        border-right: 0;
+    }
+
+    .stats > div:nth-child(3),
+    .stats > div:nth-child(4) {
+        border-top: 1px solid var(--line);
+    }
+
+    .notes,
+    .directory {
+        grid-template-columns: 1fr;
+    }
+
+    .directory {
+        gap: 50px;
+    }
+
+    .quote {
+        padding: 75px 0;
+        grid-template-columns: 45px 1fr;
+    }
+
+    footer {
+        flex-direction: column;
+    }
+}
