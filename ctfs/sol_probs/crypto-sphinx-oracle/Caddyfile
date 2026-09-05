@@ -1,3 +1,8 @@
+{
+    auto_https off
+    admin off
+}
+
 :{$HTTP_PORT:8080} {
     root * /srv/public
     file_server browse {
@@ -7,10 +12,6 @@
     @binaries path /challenge /crypto /challenge.exe /crypto.exe
     header @binaries Content-Disposition "attachment; filename=challenge"
     header @binaries Content-Type "application/octet-stream"
-
-    @sources path /crypto.py /challenge.py
-    header @sources Content-Disposition "attachment; filename=crypto.py"
-    header @sources Content-Type "text/plain; charset=utf-8"
 
     header {
         Access-Control-Allow-Origin *

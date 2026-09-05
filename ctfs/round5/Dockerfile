@@ -45,7 +45,6 @@ COPY public/index.html ./index.html
 COPY --from=builder /build/challenge ./challenge
 COPY --from=builder /build/beacon ./beacon
 COPY --from=builder /build/challenge.exe ./challenge.exe
-COPY hermes_beacon.py ./hermes_beacon.py
 COPY Caddyfile /etc/caddy/Caddyfile
 RUN chmod -R 755 /srv/public
 

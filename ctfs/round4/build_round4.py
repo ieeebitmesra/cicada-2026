@@ -1,29 +1,55 @@
-#!/usr/bin/env python3
-"""
-build_round4.py — Complete generator for Round 4 Challenge:
-1. Generates 2-track MIDI file 'ancient_hymn.mid' (Track 1 = Melody/Key, Track 2 = Harmony).
-2. Creates password-protected 'secret_archive.zip' containing 'flag.txt' encrypted with the MIDI key.
-3. Packages everything into 'round4_challenge.zip'.
-4. Encrypts payload for the obfuscated Round 4 static site (PIN: 20092002194507165301101201319690815).
-"""
-
 import struct
 import zlib
 import os
 import zipfile
-import base64
 import hashlib
 import subprocess
+import urllib.request
+from PIL import Image, ImageEnhance
+import io
 
-# -------------------------------------------------------------
-# Configuration
-# -------------------------------------------------------------
 PIN = "20092002194507165301101201319690815"
 PASSWORD = "BABYLONIANHARMONY"
 FLAG = "PANTHEON{B4byl0n14n_M1d1_H4rm0ny_D3c0d3d}"
 
 # -------------------------------------------------------------
-# 1. MIDI Generation (2 Tracks, 26 Pitches A=60..Z=85)
+# 1. Generate Ramanujan ASCII Art from Wikimedia
+# -------------------------------------------------------------
+def get_ramanujan_ascii_art():
+    url = "https://upload.wikimedia.org/wikipedia/commons/c/c1/Srinivasa_Ramanujan_-_OPC_-_1.jpg"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req) as resp:
+        img_bytes = resp.read()
+    
+    img = Image.open(io.BytesIO(img_bytes)).convert("L")
+    w, h = img.size
+    img = img.crop((int(w * 0.05), int(h * 0.04), int(w * 0.95), int(h * 0.94)))
+
+    enhancer = ImageEnhance.Contrast(img)
+    img = enhancer.enhance(1.4)
+
+    width = 72
+    aspect_ratio = img.height / img.width
+    height = int(aspect_ratio * width * 0.48)
+    img = img.resize((width, height), Image.Resampling.LANCZOS)
+
+    chars = ["@", "%", "#", "*", "+", "=", "-", ":", ".", " "]
+    pixels = list(img.getdata())
+    
+    lines = []
+    for y in range(height):
+        row = ""
+        for x in range(width):
+            val = pixels[y * width + x]
+            idx = min(int(val / 256 * len(chars)), len(chars) - 1)
+            row += chars[idx]
+        lines.append(row)
+    
+    return "\n".join(lines)
+
+# -------------------------------------------------------------
+# 2. MIDI Generation (2 Tracks, Track 1 encodes BABYLONIANHARMONY)
 # -------------------------------------------------------------
 def write_varlen(value):
     buf = bytearray()
@@ -85,7 +111,7 @@ def generate_midi(password, output_path):
     # Track 2: Ancient Lyre & Bass Accompaniment
     t2_events = [
         make_meta_track_name("Harmony - Babylonian Lyre"),
-        program_change(channel=1, program=42, delta=0), # Cello / Ancient Lyre
+        program_change(channel=1, program=42, delta=0), # Ancient Lyre
     ]
 
     bass_notes = [38, 41, 45, 43, 38, 45, 41, 38]
@@ -105,7 +131,7 @@ def generate_midi(password, output_path):
     print(f"[+] Created MIDI file: {output_path}")
 
 # -------------------------------------------------------------
-# 2. Password-Protected Zip Generation (Pure Python ZipCrypto)
+# 3. Pure Python ZipCrypto Encrypted Zip Creation
 # -------------------------------------------------------------
 class ZipCrypto:
     def __init__(self, password: str):
@@ -163,52 +189,68 @@ def create_encrypted_zip(zip_path, filename_inside, content_bytes, password):
     print(f"[+] Created encrypted zip: {zip_path} (Password: {password})")
 
 # -------------------------------------------------------------
-# 3. Main Builder
+# 4. Build Pipeline
 # -------------------------------------------------------------
 def main():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    os.chdir(cur_dir)
+    target_dir = r"E:\ieee_ctf\ctfs\round4"
+    os.chdir(target_dir)
 
-    # 1. Generate MIDI
+    print("[*] Generating Ramanujan ASCII art...")
+    ascii_art = get_ramanujan_ascii_art()
+
+    article_text = f"""
+{ascii_art}
+
+
+I am the third of my kind, yet I arrived first to your eye.
+My brothers did not ride with me — they hid in plain sight,
+long before you heard my engine.
+
+One dressed himself in pixels, wearing width like a crown
+and height like a throne. You saw him but did not count him.
+You measured him but did not name him.
+
+The other slept inside a silence older than your calendar,
+a passenger in the bones of light itself,
+waiting in the frame you passed through
+before the frequencies ever sang to you.
+
+We are three. We share one secret —
+every one of us can be broken into two pairs of cubes,
+and every one of us knows the same address.
+
+I am already in your hand.
+Go back. The other two are not lost.
+They were never hidden from you —
+only unrecognised.
+
+When all three stand together, separated by nothing but a dot,
+append our kingdom and knock.
+The door has always been open.
+"""
+
+    # 1. Write the inner text file (contains only the art, article, and riddle)
+    txt_filename = "flag.txt"
+    with open(txt_filename, "w", encoding="utf-8") as f:
+        f.write(article_text)
+    print(f"[+] Wrote {txt_filename} with Ramanujan ASCII Art and Enigma Riddle.")
+
+    # 2. Generate MIDI file
     midi_path = "ancient_hymn.mid"
     generate_midi(PASSWORD, midi_path)
 
-    # 2. Generate inner secret archive
+    # 3. Generate inner password protected zip containing ONLY the text file
     inner_zip_path = "secret_archive.zip"
-    flag_content = f"""PANTHEON ARCHIVES — CLASSIFIED REWARD
-==================================================
-Congratulations, Seeker!
-You deciphered the musical pitches of the ancient Babylonian Lyre.
+    create_encrypted_zip(inner_zip_path, txt_filename, article_text.encode('utf-8'), PASSWORD)
 
-FLAG: {FLAG}
-==================================================
-""".encode('utf-8')
-    create_encrypted_zip(inner_zip_path, "flag.txt", flag_content, PASSWORD)
-
-    # 3. Generate parchment scroll lore
-    scroll_content = """THE SCROLL OF THE BABYLONIAN LYRE
-==================================================
-"To open the sealed archives of the Pantheon, one must listen
- closely to the 26 voices of the Oracle's scale.
- From the foundational C4 (A) rising upward to C#6 (Z),
- the harp sings the true name of power."
-
-- Track 1: The Oracle's Voice (Melody)
-- Track 2: Babylonian Lyre (Harmony)
-==================================================
-"""
-    with open("scroll.txt", "w", encoding="utf-8") as f:
-        f.write(scroll_content)
-
-    # 4. Package outer challenge zip
+    # 4. Generate outer zip containing ONLY ancient_hymn.mid and secret_archive.zip
     outer_zip = "round4_challenge.zip"
     with zipfile.ZipFile(outer_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.write(midi_path, "ancient_hymn.mid")
         zf.write(inner_zip_path, "secret_archive.zip")
-        zf.write("scroll.txt", "scroll.txt")
-    print(f"[+] Packaged outer bundle: {outer_zip}")
+    print(f"[+] Outer bundle ({outer_zip}) packaged with EXACTLY 2 items: {zf.namelist()}")
 
-    # 5. Encrypt payload for Round 4 static site using Node.js built-in crypto (Web Crypto compatible AES-GCM + PBKDF2)
+    # 5. Encrypt payload for Round 4 static site matching app.js parameters
     node_script = f"""
     const fs = require('fs');
     const crypto = require('crypto');
@@ -216,24 +258,26 @@ FLAG: {FLAG}
     const pin = "{PIN}";
     const zipBytes = fs.readFileSync('round4_challenge.zip');
 
-    const salt = crypto.randomBytes(16);
-    const iv = crypto.randomBytes(12);
+    const salt = Buffer.from([112, 97, 110, 116, 104, 101, 111, 110, 95, 114, 111, 117, 110, 100, 52, 33]);
+    const iv = Buffer.from([26, 63, 123, 156, 78, 130, 208, 101, 17, 148, 239, 40]);
     const key = crypto.pbkdf2Sync(pin, salt, 100000, 32, 'sha256');
 
     const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-    const encrypted = Buffer.concat([cipher.update(zipBytes), cipher.final()]);
-    const tag = cipher.getAuthTag();
+    const encrypted = Buffer.concat([cipher.update(zipBytes), cipher.final(), cipher.getAuthTag()]);
+    const b64 = encrypted.toString('base64');
+    fs.writeFileSync('payload.b64', b64);
 
-    const blob = Buffer.concat([salt, iv, encrypted, tag]);
-    fs.writeFileSync('payload.b64', blob.toString('base64'));
+    let appJs = fs.readFileSync('app.js', 'utf8');
+    appJs = appJs.replace(/const _0xCIPHER = '[^']*';/, `const _0xCIPHER = '${{b64}}';`);
+    fs.writeFileSync('app.js', appJs);
+    console.log('[+] Encrypted payload and updated app.js successfully!');
     """
     subprocess.run(["node", "-e", node_script], check=True)
-    print(f"[+] Updated encrypted payload for static site: payload.b64")
 
-    # 6. Compute Flag Hash for portal
-    flag_hash = hashlib.sha256(FLAG.encode('utf-8')).hexdigest()
+    flag_str = "17291383220683.pages.dev"
+    flag_hash = hashlib.sha256(flag_str.encode('utf-8')).hexdigest()
     print("\n" + "="*50)
-    print(f"Round 4 Flag: {FLAG}")
+    print(f"Round 4 Expected Flag: {flag_str}")
     print(f"Round 4 Flag Hash (SHA-256): {flag_hash}")
     print("="*50)
 

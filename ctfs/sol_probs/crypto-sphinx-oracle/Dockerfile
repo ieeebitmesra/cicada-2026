@@ -45,7 +45,6 @@ COPY public/index.html ./index.html
 COPY --from=builder /build/challenge ./challenge
 COPY --from=builder /build/crypto ./crypto
 COPY --from=builder /build/challenge.exe ./challenge.exe
-COPY crypto.py ./crypto.py
 COPY Caddyfile /etc/caddy/Caddyfile
 RUN chmod -R 755 /srv/public
 

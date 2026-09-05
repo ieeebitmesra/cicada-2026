@@ -1,4 +1,9 @@
-{$HTTP_PORT:8080} {
+{
+    auto_https off
+    admin off
+}
+
+:{$HTTP_PORT:8080} {
     root * /srv/public
     file_server browse {
         hide .git
@@ -7,10 +12,6 @@
     @binaries path /challenge /beacon /challenge.exe /beacon.exe
     header @binaries Content-Disposition "attachment; filename=challenge"
     header @binaries Content-Type "application/octet-stream"
-
-    @sources path /hermes_beacon.py /challenge.py
-    header @sources Content-Disposition "attachment; filename=hermes_beacon.py"
-    header @sources Content-Type "text/plain; charset=utf-8"
 
     header {
         Access-Control-Allow-Origin *
