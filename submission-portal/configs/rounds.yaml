@@ -22,34 +22,34 @@ rounds:
     points: 100
     is_active: true
     allow_hints: true
-    allow_skips: false
-    flag_hash: "2574da35e604fe70836157593d6171013b11042c231c5245ee9682f1a57335c2"
+    allow_skips: true
+    flag_hash: "cd510927fc22ced613463b1132b817f9a0dc28ee5e0b101fcd01774f3258523a"
     hints:
       - type: plain
-        text: "It’s hard to spot a ghost in a blizzard. Try looking at the negative, or throw a bucket of digital paint on the background."
+        text: "Seek past where the curtain falls—beyond the wall that marks the end (IEND). Listen to the tapping of the telegraph wire: dots and dashes in the dark. The Roman emperor's key is yours."
       - type: encoded
-        text: "JTVWJTM2JTIwJTM2JTMxJTIwJTM2JTM5JTIwJTM3JTMyJTIwJTM2JTM1JTIwJTM2JTM3JTIwJTMyJTMwJTIwJTM2JTM3JTIwJTM3JTM1JTIwJTM3JTMyJTIwJTMyJTMwJTIwJTM2JTM2JTIwJTM2JTMxJTIwJTM2JTMyJTIwJTM2JTYxJTIwJTMyJTMwJTIwJTM2JTM3JTIwJTM2JTMyJTIwJTMyJTMwJTIwJTM2JTM2JTIwJTM3JTMyJTIwJTM3JTMyJTIwJTMyJTMwJTIwJTM2JTM3JTIwJTM3JTM1JTIwJTM3JTMyJTIwJTMyJTMwJTIwJTM3JTM0JTIwJTM3JTM1JTIwJTM2JTMyJTIwJTM2JTM2JTIwJTM2JTM3JTIwJTMyJTY1"
+        text: "MmU2NjY1Njg2MjZjMjA2Njc2MjA2YzcyNzgyMDY2Mjc2NTYyNjU3MjYzN2E3MjIwNjE2ZTdhNjI0NTIwNzI3NTY3MjA3MTYxNmUyMDJjNTM0MjUyMjA2NzY2NmU2MzIwNzU2MzZlNjU3NDcyNzk3MjY3MjA3Mjc1NjcyMDcyNjc2ZTc5NjY2MTZlNjU0NzBhMmU3ODY1NmU3MTIwNzI3NTY3MjA2MTc2MjA2NjcyNzU2NjZlNzEyMDcxNjE2ZTIwNjY2NzYyNzEyMDNhNzI2NTc2NmEyMDcyNzU2NzIwNzM2MjIwNzQ2MTc2NjM2MzZlNjcyMDcyNzU2NzIwNjI2NzIwNjE3MjY3NjY3NjU5MGEyZTI5NTE0MTUyNTYyODIwNzE2MTcyMjA3Mjc1NjcyMDY2Nzg2NTZlN2EyMDY3NmU3NTY3MjA3OTc5NmU2YTIwNzI3NTY3MjA3MTYxNjI2YzcyNmZlMjgwOTQ2Njc5Nzk2ZTczMjA2MTc2NmU2NzY1Njg3MDIwNzI3NTY3MjA3MjY1NzI3NTZhMjA2NzY2NmU2MzIwNzg3MjcyNDYwYTJlNjc3NTc0NzY3OTIwNmE2Mjc5Nzk2Mjc1MjA3NTY3NzY2YTIwNjY3MjZjNzIyMDY1Njg2MjZjMjA3MTYxNzY3OTZmMjA2MjY3MjAyYzY3NzU3NDc2NjYyMDYxNzYyMDY3NzY2ZTZhNmUyMDY2NjE2YTYyNjU3MDIwNzI2Njc5NmU3MzIwNzI2OTc2NTMwYTJlNzQ2MTY4NjU2NzY2MjA3MjY1NmUyMDY2NzI3Njc5MjA3MjY1NzI3NTZhMjA2ZTY3NmU3MTZlNjc3MjdhMjA2NTYyNjEyMDJjNzI2ODc0NjE2MjY3MjA2NjI3Njc2Njc2Njc2NTZlMjA3Mjc1NjcyMDY3NjY2ODY1NjcyMDY3NjI2MTIwNjI1MTBhNWQyMDUxNDE1MjIwNTI1NTQ3MjA1MTQxNDI0YzUyNGYyMDU5NTY1MjQ5MjA1MjU1NDcyMGUyODA5NDIwNDc0MTU2NTUyMDVi"
 
   - id: 2
     name: "Round 2 — Crack it if you can"
     points: 150
     is_active: true
     allow_hints: true
-    allow_skips: false
+    allow_skips: true
     flag_hash: "2fb64ebc726bc0188f1abea53539644e984fdfc1ae944cc770debaaef52485da"
     hints:
       - type: plain
-        text: "Don't reinvent the wheel analyzing frequency domains. The flag was embedded using FFT Block Steganography. You can find the exact CLI extraction tool here:https://gist.github.com/aj-1729/9c6a477425dbb253a0a22f645ee329ff"
+        text: "Don't reinvent the wheel analyzing frequency domains. The flag was embedded using FFT Block Steganography. You can find the exact CLI extraction tool here: https://gist.github.com/aj-1729/9c6a477425dbb253a0a22f645ee329ff"
       - type: encoded
         text: "TlRJMlpETTVNekUyWXpaa05tTTJZMlkzTmprME1qWmpOak0wTnpZalltRTJOVFUzTkdVM016VmFOVGc0UkRablVUVTFOVGgwYVRZc05EazBPRFV5Tm1ZMVlUVXpOREkyTnpJMVlUVTRObUkzTlE9PQ=="
 
   - id: 3
-    name: "Round 3 — The Hidden Baby"
-    points: 300
+    name: "Round 3 — The Server's Whisper"
+    points: 200
     is_active: true
     allow_hints: false
     allow_skips: false
-    flag_hash: "replace_with_sha256_hex"
+    flag_hash: "100868f773fa000bc143c7b2046bebbbb82dfa5bfdaea2e32a67a0da7d27e2a4"
     hints:
       - type: plain
         text: "Check the response headers before the page content."
@@ -58,13 +58,91 @@ rounds:
 
   - id: 4
     name: "Round 4 — The Seeker's Files"
-    points: 300
-    is_active: false
+    points: 250
+    is_active: true
     allow_hints: false
     allow_skips: false
     flag_hash: "9c7f970fcc02aa84c6798129ea76c12b411c81ca8cf49e3eb8c1b8c61222f3e5"
     hints:
       - type: plain
-        text: "The numbers are Babylonian; the music is not what it seems."
+        text: "The numbers are Babylonian; the music is not what it seems. 26 pitches map directly to the alphabet."
       - type: encoded
         text: "YmFieWxvbiArIG1pZGkgPSBwbGF5IGl0IGJhY2t3YXJkcw=="
+
+  - id: 5
+    name: "Round 5 — The Gatekeeper's Beacon"
+    points: 300
+    is_active: true
+    allow_hints: false
+    allow_skips: false
+    flag_hash: "2abaa26fc0e5141e712b67a1b947448e6facdb28f18b907d383d5988b3adec4a"
+    hints:
+      - type: plain
+        text: "A known flag always starts with 'PANTHEON{'. XOR the beginning of the ciphertext with the known header to recover the 8-character repeating key."
+      - type: encoded
+        text: "S25vd24gcGxhaW50ZXh0IFhPUiByZWNvdmVycyB0aGUgOC1ieXRlIGtleSBIRVJNRVMyNg=="
+
+  - id: 6
+    name: "Round 6 — Web: The Secure Portal"
+    points: 350
+    is_active: true
+    allow_hints: false
+    allow_skips: false
+    flag_hash: "282143fcc7bddb406283fa253d89a1eae330c5b4834a975092adcb9d3fb347a0"
+    hints:
+      - type: plain
+        text: "Access the portal at https://web-secure-portal.onrender.com. The login page and quantum errors are a decoy. Check the auth_token cookie issued after registration."
+      - type: encoded
+        text: "RGVjb2RlIHRoZSBiYXNlNjQgYXV0aF90b2tlbiBjb29raWUsIGNoYW5nZSB0aGUgcm9sZSB0byBhZG1pbiwgYW5kIHJlbG9hZCB0aGUgcm9vdCBkYXNoYm9hcmQu"
+
+  - id: 7
+    name: "Round 7 — Web: Global Megaphone"
+    points: 400
+    is_active: true
+    allow_hints: false
+    allow_skips: false
+    flag_hash: "3364059a1cd262b1303f3d909895584fede8cae63733bccbc9b640e7eba033aa"
+    hints:
+      - type: plain
+        text: "Access the megaphone at https://web-global-megaphone.onrender.com. The sanitization filter deletes 'Flag' only once without recursing. Use a nested payload like {{ .FlFlagag }}."
+      - type: encoded
+        text: "Tm9uLXJlY3Vyc2l2ZSBzdHJpbmcgcmVwbGFjZTogbmVzdCB0aGUgZm9yYmlkZGVuIHdvcmQgaW5zaWRlIGl0c2VsZi4="
+
+  - id: 8
+    name: "Round 8 — Binary: Stonks Trading AI"
+    points: 450
+    is_active: true
+    allow_hints: false
+    allow_skips: false
+    flag_hash: "3a0f0471d1a600829d809954e32612d4fd4f76e5c66e3182fafeab7bbb254cce"
+    hints:
+      - type: plain
+        text: "Connect to the terminal at https://pwn-stonks-fmt.onrender.com. The API token input is evaluated directly inside printf(). Pass format specifiers like %p to leak the base64 secret from the stack."
+      - type: encoded
+        text: "Rm9ybWF0IHN0cmluZyB2dWxuZXJhYmlsaXR5OiBzdXBwbHkgJXAuJXAucC4uLiB0byBsZWFrIHRoZSBzdGFjayBtZW1vcnkgY29udGFpbmluZyB0aGUgYmFzZTY0IGZsYWcu"
+
+  - id: 9
+    name: "Round 9 — Binary: The Labyrinth"
+    points: 500
+    is_active: true
+    allow_hints: false
+    allow_skips: false
+    flag_hash: "6653efdf27672ed018ac2f5e72b53836c527fa4b6903d05a5fbb630319b01846"
+    hints:
+      - type: plain
+        text: "Navigate the maze at https://pwn-maze-oob-1.onrender.com. The player coordinates have no bounds checking. Move out of bounds and drop breadcrumbs ('p') to overwrite the win_flag variable in memory."
+      - type: encoded
+        text: "T3V0IG9mIGJvdW5kcyB3cml0ZTogbW92ZSBwYXN0IHRoZSAzMHg5MCBtYXAgYm91bmRhcnkgdG8gY29ycnVwdCB0aGUgYWRqYWNlbnQgd2luX2ZsYWcgaW50ZWdlci4="
+
+  - id: 10
+    name: "Round 10 — Crypto: Sphinx of the Pantheon"
+    points: 600
+    is_active: true
+    allow_hints: false
+    allow_skips: false
+    flag_hash: "08bc315fca470a2d031bf61e74fcbe7d930371f38ba259db79ad7c426fffdf37"
+    hints:
+      - type: plain
+        text: "Confront the Sphinx at https://crypto-sphinx-oracle.onrender.com. Query the oracle with known plaintexts to determine the Vigenere key ZEUS, then decrypt the offering OLYMPIANNECTAR."
+      - type: encoded
+        text: "VmlnZW5lcmUgY2hvc2VuLXBsYWludGV4dCBvcmFjbGU6IGVuY3J5cHQga25vd24gc2VxdWVuY2VzIHRvIGV4dHJhY3Qga2V5IFpFVVMsIHRoZW4gZGVjcnlwdCBPTFlNUElBTk5FQ1RBUi4="

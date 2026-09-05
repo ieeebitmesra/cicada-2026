@@ -157,7 +157,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Execute the user's template against our secret data
 		var buf bytes.Buffer
-		secret := SecretData{Flag: "PANTHEON{n0n_r3curs1v3_bl4ckl1sts_4r3_b4d_g0}"}
+		secret := SecretData{Flag: "PANTHEON{ssti_g0_t3mpl4t3_https://pwn-stonks-fmt.onrender.com}"}
 		
 		err = userTmpl.Execute(&buf, secret)
 		if err != nil {

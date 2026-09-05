@@ -5,10 +5,10 @@
 void buy_stonks() {
     char api_token[300];
 
-    // The secret flag: "PANTHEON{f0rm4t_5tr1ng_m4st3r}"
-    // Base64 encoded: "UEFOVEhFT057ZjBybTR0XzV0cjFuZ19tNHN0M3J9"
+    // The secret flag: "PANTHEON{f0rm4t_5tr1ng_https://pwn-maze-oob-1.onrender.com}"
+    // Base64 encoded: "UEFOVEhFT057ZjBybTR0XzV0cjFuZ19odHRwczovL3B3bi1tYXplLW9vYi0xLm9ucmVuZGVyLmNvbX0="
     // By declaring this as a local array, it gets pushed onto the stack.
-    char secret_b64[] = "UEFOVEhFT057ZjBybTR0XzV0cjFuZ19tNHN0M3J9"; 
+    char secret_b64[] = "UEFOVEhFT057ZjBybTR0XzV0cjFuZ19odHRwczovL3B3bi1tYXplLW9vYi0xLm9ucmVuZGVyLmNvbX0="; 
 
     printf("\nUsing patented AI algorithms to find the best stonks...\n");
     printf("Please enter your API token to authorize the trade:\n> ");

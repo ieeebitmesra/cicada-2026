@@ -11,7 +11,8 @@ struct GameState {
 };
 
 void win() {
-    cout << "\n[+] ACCESS GRANTED. PANTHEON{0ut_0f_b0unds_m3m0ry_c0rrupt10n_cpp}" << endl;
+    cout << "\n[+] ACCESS GRANTED. PANTHEON{0ut_0f_b0unds_https://crypto-sphinx-oracle.onrender.com}" << endl;
+    cout << "[+] Next Trial: https://crypto-sphinx-oracle.onrender.com" << endl;
     exit(0);
 }
 

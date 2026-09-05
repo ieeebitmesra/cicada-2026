@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PANTHEON CTF // ROUND 5: Hermes Beacon</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #111827;
+            --border-color: #1f2937;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            --code-bg: #030712;
+            --success-color: #10b981;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 680px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+        .badge {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: var(--accent-color);
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.85em;
+            font-weight: 600;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        h1 { font-size: 1.6em; color: #ffffff; margin-bottom: 6px; }
+        p.desc { color: var(--text-secondary); font-size: 0.95em; line-height: 1.6; margin-bottom: 20px; }
+        .action-box {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .action-title {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background-color: var(--accent-color);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1em;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            margin-right: 10px;
+        }
+        .download-btn:hover { background-color: var(--accent-hover); transform: translateY(-1px); }
+        .code-snippet {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: var(--success-color);
+            word-break: break-all;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <div>
+                <h1>The Gatekeeper's Beacon</h1>
+                <p style="color: var(--text-secondary); font-size: 0.85em;">PANTHEON CTF // ROUND 5</p>
+            </div>
+            <span class="badge">REVERSE / CRYPTO</span>
+        </div>
+
+        <p class="desc">
+            An intercepted interstellar beacon was captured broadcast over Olympus ether. 
+            Decrypt the modulation signal to locate the coordinates to the Inner Sanctum.
+        </p>
+
+        <div class="action-box">
+            <div class="action-title">Artifact Downloads</div>
+            <a href="/hermes_beacon.py" class="download-btn" download>Download hermes_beacon.py</a>
+            <a href="/challenge" class="download-btn" style="background-color:#475569;" download>Download ELF Binary</a>
+        </div>
+
+        <div class="action-box">
+            <div class="action-title">Netcat Terminal Connection</div>
+            <p style="color: var(--text-secondary); font-size: 0.85em; margin-bottom: 8px;">
+                Connect directly to the interactive beacon receiver over TCP:
+            </p>
+            <div class="code-snippet">nc &lt;HOST&gt; 5000</div>
+        </div>
+    </div>
+</body>
+</html>

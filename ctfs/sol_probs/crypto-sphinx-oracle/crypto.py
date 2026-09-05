@@ -3,7 +3,7 @@ import string
 import time
 
 # The secret flag
-FLAG = "PANTHEON{Cr4ck1ng_Th3_0lymp14n_0r4cl3}"
+FLAG = "PANTHEON{Cr4ck1ng_Th3_0lymp14n_0r4cl3_c0mpl3t3d}"
 SECRET_OFFERING = "OLYMPIANNECTAR"
 VIGENERE_KEY = "ZEUS"
 

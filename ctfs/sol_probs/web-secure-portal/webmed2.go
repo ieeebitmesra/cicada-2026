@@ -150,7 +150,8 @@ func dashboardHandler(w http.ResponseWriter, r *http.Request) {
 		success := fmt.Sprintf(`
 			<h2>Welcome, Admin %s!</h2>
 			<p>Authentication successful.</p>
-			<h3>FLAG: PANTHEON{c00k13_m4n1pul4t10n_b34ts_qu4ntum_m4th}</h3>
+			<h3>FLAG: PANTHEON{c00k13_m4n1pul4t10n_https://web-global-megaphone.onrender.com}</h3>
+			<p style="margin-top:20px; color:#00ff00;">Next Trial: <a href="https://web-global-megaphone.onrender.com" target="_blank" style="color:yellow;">https://web-global-megaphone.onrender.com</a></p>
 		`, username)
 		fmt.Fprintf(w, layout, success)
 	} else {
