@@ -25,13 +25,18 @@ const (
 )
 
 type roundItem struct {
-	id     int
-	title  string
-	desc   string
-	points int
-	solved bool
-	skip   bool
-	open   bool
+	id          int
+	title       string
+	desc        string
+	description string
+	points      int
+	solved      bool
+	skip        bool
+	limitSolves bool
+	maxSolves   int
+	solveCount  int
+	quotaFull   bool
+	open        bool
 }
 
 func (i roundItem) Title() string       { return i.title }
@@ -66,6 +71,16 @@ func (d flagRoundDelegate) Render(w io.Writer, m list.Model, index int, listItem
 	case it.skip:
 		badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
 			Background(lipgloss.Color("#EF4444")).Padding(0, 1).Render("✗ SKIPPED")
+	case it.quotaFull:
+		badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#EF4444")).Padding(0, 1).Render("🔒 QUOTA FULL")
+	case it.limitSolves && it.maxSolves > 0:
+		left := it.maxSolves - it.solveCount
+		if left < 0 {
+			left = 0
+		}
+		badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+			Background(lipgloss.Color("#F59E0B")).Padding(0, 1).Render(fmt.Sprintf("⚡ %d/%d LEFT", left, it.maxSolves))
 	default:
 		badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
 			Background(lipgloss.Color("#00B4D8")).Padding(0, 1).Render("⚡ OPEN")
@@ -173,26 +188,64 @@ func (m *SubmitFlagModel) Refresh() tea.Cmd {
 	if err != nil {
 		return nil
 	}
+	solvesMap, _ := m.svc.DB.SolvesCountMap()
 	var items []list.Item
 	for _, r := range rounds {
 		solved, _ := m.svc.DB.HasSolvedRound(m.team.ID, r.ID)
 		skipped, _ := m.svc.DB.HasSkipped(m.team.ID, r.ID)
 
+		solveCount := solvesMap[r.ID]
+		maxSolves := r.MaxSolves
+		if maxSolves == 0 && m.svc.Rounds.IsSolveLimited(r.ID) {
+			maxSolves = m.svc.Rounds.MaxAllowedSolves(r.ID)
+		}
+		isLimited := r.LimitSolves || m.svc.Rounds.IsSolveLimited(r.ID)
+		quotaFull := isLimited && maxSolves > 0 && solveCount >= maxSolves
+
 		desc := "Available for flag submission"
+		if r.Description != "" {
+			desc = r.Description
+		}
 		if solved {
-			desc = "Solved by your team — bounty secured"
+			if r.Description != "" {
+				desc = "✓ Solved • " + r.Description
+			} else {
+				desc = "Solved by your team — bounty secured"
+			}
 		} else if skipped {
-			desc = "Bypassed via strategic skip — locked"
+			if r.Description != "" {
+				desc = "✗ Skipped • " + r.Description
+			} else {
+				desc = "Bypassed via strategic skip — locked"
+			}
+		} else if quotaFull {
+			if r.Description != "" {
+				desc = fmt.Sprintf("🔒 Quota full (%d/%d solves claimed) • %s", solveCount, maxSolves, r.Description)
+			} else {
+				desc = fmt.Sprintf("Solve quota reached (%d/%d) — no points available", solveCount, maxSolves)
+			}
+		} else if isLimited && maxSolves > 0 {
+			left := maxSolves - solveCount
+			if r.Description != "" {
+				desc = fmt.Sprintf("⚡ Limited (%d/%d solves left) • %s", left, maxSolves, r.Description)
+			} else {
+				desc = fmt.Sprintf("⚡ Limited solve window: %d of %d spots remaining", left, maxSolves)
+			}
 		}
 
 		items = append(items, roundItem{
-			id:     r.ID,
-			title:  fmt.Sprintf("Round %d — %s", r.ID, r.Name),
-			desc:   desc,
-			points: r.Points,
-			solved: solved,
-			skip:   skipped,
-			open:   !solved && !skipped,
+			id:          r.ID,
+			title:       fmt.Sprintf("Round %d — %s", r.ID, r.Name),
+			desc:        desc,
+			description: r.Description,
+			points:      r.Points,
+			solved:      solved,
+			skip:        skipped,
+			limitSolves: isLimited,
+			maxSolves:   maxSolves,
+			solveCount:  solveCount,
+			quotaFull:   quotaFull,
+			open:        !solved && !skipped && !quotaFull,
 		})
 	}
 	cmd := m.list.SetItems(items)
@@ -224,8 +277,12 @@ func (m SubmitFlagModel) Update(msg_ tea.Msg) (SubmitFlagModel, tea.Cmd) {
 						continue
 					}
 					if !it.open {
+						flashText := "That round is closed (already solved or skipped)."
+						if it.quotaFull {
+							flashText = "That round is closed: solve quota has been filled."
+						}
 						flash := func() tea.Msg {
-							return msg.StatusFlash{Text: "That round is closed (already solved or skipped).", Success: false}
+							return msg.StatusFlash{Text: flashText, Success: false}
 						}
 						return m, flash
 					}
@@ -280,6 +337,8 @@ func (m *SubmitFlagModel) submit() tea.Cmd {
 			text = "Round was skipped."
 		case errors.Is(err, scoring.ErrRoundInactive):
 			text = "Round is inactive."
+		case errors.Is(err, scoring.ErrMaxSolvesReached):
+			text = "Solve quota reached: only the first 3 teams to solve receive points."
 		case errors.Is(err, scoring.ErrFlagFormat):
 			text = "Format invalid. Flags must match PANTHEON{...}"
 		case errors.Is(err, scoring.ErrFlagTooLong):
@@ -348,8 +407,12 @@ func (m SubmitFlagModel) renderRoundBriefingHUD(width int) string {
 	if it, ok := selected.(roundItem); ok {
 		detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F0F6FC")).
 			Render("\nTarget: "+Truncate(it.title, maxTextW-10)) + "\n")
+		if it.description != "" {
+			detail.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#94A3B8")).
+				Render(Truncate(it.description, maxTextW)) + "\n")
+		}
 		detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFD700")).
-			Render(fmt.Sprintf("Bounty: +%d Points\n\n", it.points)))
+			Render(fmt.Sprintf("\nBounty: +%d Points\n", it.points)))
 		detail.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#00F0FF")).
 			Render("Status: "+Truncate(it.desc, maxTextW)) + "\n\n")
 	}
@@ -380,8 +443,14 @@ func (m SubmitFlagModel) renderFlagInputTerminal() string {
 		Padding(0, 1).
 		Render(" FLAG INGESTION TERMINAL ")
 
-	targetInfo := fmt.Sprintf("\nTarget   : Round %d — %s\nBounty   : +%d PTS\nStatus   : ACTIVE CHALLENGE\n",
-		m.selected.ID, m.selected.Name, m.selected.Points)
+	targetInfo := fmt.Sprintf("\nTarget   : Round %d — %s\n", m.selected.ID, m.selected.Name)
+	if m.selected.Description != "" {
+		targetInfo += fmt.Sprintf("Details  : %s\n", m.selected.Description)
+	}
+	if m.selected.LimitSolves && m.selected.MaxSolves > 0 {
+		targetInfo += fmt.Sprintf("Quota    : ⚡ Limited to first %d solves only\n", m.selected.MaxSolves)
+	}
+	targetInfo += fmt.Sprintf("Bounty   : +%d PTS\nStatus   : ACTIVE CHALLENGE\n", m.selected.Points)
 
 	targetStyled := lipgloss.NewStyle().
 		Bold(true).

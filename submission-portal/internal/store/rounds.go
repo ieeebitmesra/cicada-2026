@@ -19,15 +19,26 @@ func (db *DB) UpsertRounds(defs []models.RoundDef) error {
 		if !d.IsActive {
 			active = 0
 		}
+		desc := d.GetDescription()
+		limitSolves := 0
+		if d.IsSolveLimited() {
+			limitSolves = 1
+		}
+		maxSolves := d.MaxAllowedSolves()
+
 		_, err := tx.Exec(`
-			INSERT INTO rounds (id, name, points, flag_hash, is_active, sort_order)
-			VALUES (?, ?, ?, ?, ?, ?)
+			INSERT INTO rounds (id, name, description, points, flag_hash, is_active, limit_solves, max_solves, sort_order)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ON CONFLICT(id) DO UPDATE SET
 				name = excluded.name,
+				description = excluded.description,
 				points = excluded.points,
 				flag_hash = CASE WHEN rounds.flag_hash = '' OR rounds.flag_hash IS NULL THEN excluded.flag_hash ELSE rounds.flag_hash END,
+				is_active = excluded.is_active,
+				limit_solves = excluded.limit_solves,
+				max_solves = excluded.max_solves,
 				sort_order = excluded.sort_order`,
-			d.ID, d.Name, d.Points, d.FlagHash, active, i)
+			d.ID, d.Name, desc, d.Points, d.FlagHash, active, limitSolves, maxSolves, i)
 		if err != nil {
 			tx.Rollback()
 			return fmt.Errorf("upsert round %d: %w", d.ID, err)
@@ -53,8 +64,8 @@ func (db *DB) SetRoundFlagHash(id int, hash string) error {
 func (db *DB) GetRound(id int) (*models.Round, error) {
 	r := &models.Round{}
 	err := db.QueryRow(
-		`SELECT id, name, points, flag_hash, is_active, sort_order FROM rounds WHERE id = ?`, id).
-		Scan(&r.ID, &r.Name, &r.Points, &r.FlagHash, &r.IsActive, &r.SortOrder)
+		`SELECT id, name, description, points, flag_hash, is_active, limit_solves, max_solves, sort_order FROM rounds WHERE id = ?`, id).
+		Scan(&r.ID, &r.Name, &r.Description, &r.Points, &r.FlagHash, &r.IsActive, &r.LimitSolves, &r.MaxSolves, &r.SortOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +75,7 @@ func (db *DB) GetRound(id int) (*models.Round, error) {
 // ListRounds returns rounds ordered by sort_order. When activeOnly is true,
 // only active rounds are returned.
 func (db *DB) ListRounds(activeOnly bool) ([]models.Round, error) {
-	q := `SELECT id, name, points, flag_hash, is_active, sort_order FROM rounds`
+	q := `SELECT id, name, description, points, flag_hash, is_active, limit_solves, max_solves, sort_order FROM rounds`
 	if activeOnly {
 		q += ` WHERE is_active = 1`
 	}
@@ -79,7 +90,7 @@ func (db *DB) ListRounds(activeOnly bool) ([]models.Round, error) {
 	for rows.Next() {
 		var r models.Round
 		var active bool
-		if err := rows.Scan(&r.ID, &r.Name, &r.Points, &r.FlagHash, &active, &r.SortOrder); err != nil {
+		if err := rows.Scan(&r.ID, &r.Name, &r.Description, &r.Points, &r.FlagHash, &active, &r.LimitSolves, &r.MaxSolves, &r.SortOrder); err != nil {
 			return nil, err
 		}
 		r.IsActive = active

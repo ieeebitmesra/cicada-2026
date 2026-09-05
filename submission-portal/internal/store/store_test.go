@@ -121,3 +121,40 @@ func TestRegistrationUpdate(t *testing.T) {
 		t.Errorf("registration not persisted: %+v", got)
 	}
 }
+
+func TestRoundDescriptionStore(t *testing.T) {
+	db := newTestDB(t)
+
+	rounds := []models.RoundDef{
+		{ID: 1, Name: "R1", Description: "Round 1 Description", Points: 100, FlagHash: "hash1", IsActive: true},
+		{ID: 2, Name: "R2", Text: "Round 2 Text", Points: 200, FlagHash: "hash2", IsActive: true},
+	}
+	if err := db.UpsertRounds(rounds); err != nil {
+		t.Fatalf("UpsertRounds failed: %v", err)
+	}
+
+	r1, err := db.GetRound(1)
+	if err != nil {
+		t.Fatalf("GetRound(1) failed: %v", err)
+	}
+	if r1.Description != "Round 1 Description" {
+		t.Errorf("expected Description 'Round 1 Description', got %q", r1.Description)
+	}
+
+	r2, err := db.GetRound(2)
+	if err != nil {
+		t.Fatalf("GetRound(2) failed: %v", err)
+	}
+	if r2.Description != "Round 2 Text" {
+		t.Errorf("expected Description 'Round 2 Text', got %q", r2.Description)
+	}
+
+	list, err := db.ListRounds(false)
+	if err != nil {
+		t.Fatalf("ListRounds failed: %v", err)
+	}
+	if len(list) != 2 || list[0].Description != "Round 1 Description" || list[1].Description != "Round 2 Text" {
+		t.Errorf("ListRounds descriptions mismatch: %+v", list)
+	}
+}
+

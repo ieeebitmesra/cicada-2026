@@ -14,11 +14,12 @@ import (
 
 // ErrRoundInactive / ErrNotRegistered are game-flow guards.
 var (
-	ErrRoundInactive   = errors.New("round is not active")
-	ErrAlreadySkipped  = errors.New("round already skipped")
-	ErrSolvedNoSkip    = errors.New("round already solved — nothing to skip")
-	ErrHintsRestricted = errors.New("hints are restricted for this competition")
-	ErrSkipsRestricted = errors.New("round skipping is restricted for this competition")
+	ErrRoundInactive    = errors.New("round is not active")
+	ErrAlreadySkipped   = errors.New("round already skipped")
+	ErrSolvedNoSkip     = errors.New("round already solved — nothing to skip")
+	ErrHintsRestricted  = errors.New("hints are restricted for this competition")
+	ErrSkipsRestricted  = errors.New("round skipping is restricted for this competition")
+	ErrMaxSolvesReached = errors.New("maximum solve quota reached for this round — no points awarded")
 )
 
 // Service wires the store, rounds config and validators into game operations.
@@ -73,6 +74,18 @@ func (s *Service) SubmitFlag(team *models.Team, roundID int, raw string) (*Submi
 		return nil, ErrAlreadySkipped
 	}
 
+	// Check if solve quota has already been reached for this round
+	maxSolves := s.Rounds.MaxAllowedSolves(roundID)
+	if maxSolves > 0 {
+		solvesCount, err := s.DB.CountSolvesForRound(roundID)
+		if err != nil {
+			return nil, err
+		}
+		if solvesCount >= maxSolves {
+			return nil, ErrMaxSolvesReached
+		}
+	}
+
 	// Validate flag hash against the live database record (dbRound)
 	expectedHash := strings.ToLower(strings.TrimSpace(dbRound.FlagHash))
 	if expectedHash == "" {
@@ -83,6 +96,16 @@ func (s *Service) SubmitFlag(team *models.Team, roundID int, raw string) (*Submi
 	}
 	actualHash := HashFlag(flag)
 	correct := subtle.ConstantTimeCompare([]byte(actualHash), []byte(expectedHash)) == 1
+
+	if correct && maxSolves > 0 {
+		solvesCount, err := s.DB.CountSolvesForRound(roundID)
+		if err != nil {
+			return nil, err
+		}
+		if solvesCount >= maxSolves {
+			return nil, ErrMaxSolvesReached
+		}
+	}
 
 	if _, err := s.DB.RecordSubmission(team.ID, roundID, flag, correct); err != nil {
 		return nil, err

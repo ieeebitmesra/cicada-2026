@@ -123,8 +123,17 @@ func (m *TeamStatusModel) buildReport() string {
 	for _, sk := range bd.Skips {
 		skippedSet[sk.RoundID] = true
 	}
+	solvesCountMap, _ := m.svc.DB.SolvesCountMap()
 
 	for _, r := range rounds {
+		limitSolves := r.LimitSolves || m.svc.Rounds.IsSolveLimited(r.ID)
+		maxSolves := r.MaxSolves
+		if maxSolves == 0 && limitSolves {
+			maxSolves = m.svc.Rounds.MaxAllowedSolves(r.ID)
+		}
+		solveCount := solvesCountMap[r.ID]
+		quotaFull := limitSolves && maxSolves > 0 && solveCount >= maxSolves
+
 		var badge, note string
 		switch {
 		case solvedSet[r.ID]:
@@ -142,6 +151,20 @@ func (m *TeamStatusModel) buildReport() string {
 				Background(lipgloss.Color("#30363D")).Padding(0, 1).Render("— INACTIVE")
 			note = lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).
 				Render(fmt.Sprintf("%d pts", r.Points))
+		case quotaFull:
+			badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+				Background(lipgloss.Color("#FF3860")).Padding(0, 1).Render("🔒 QUOTA FULL")
+			note = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF3860")).
+				Render(fmt.Sprintf("0 pts (%d/%d solves reached)", solveCount, maxSolves))
+		case limitSolves && maxSolves > 0:
+			left := maxSolves - solveCount
+			if left < 0 {
+				left = 0
+			}
+			badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
+				Background(lipgloss.Color("#F59E0B")).Padding(0, 1).Render(fmt.Sprintf("⚡ %d/%d LEFT", left, maxSolves))
+			note = lipgloss.NewStyle().Foreground(lipgloss.Color("#C9D1D9")).
+				Render(fmt.Sprintf("%d pts", r.Points))
 		default:
 			badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
 				Background(lipgloss.Color("#00F0FF")).Padding(0, 1).Render("⚡ OPEN")
@@ -150,6 +173,9 @@ func (m *TeamStatusModel) buildReport() string {
 		}
 
 		line := fmt.Sprintf(" %s Round %-2d — %-24s %s", badge, r.ID, r.Name, note)
+		if r.Description != "" {
+			line += fmt.Sprintf("\n    ↳ %s", lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).Render(r.Description))
+		}
 		matrixBuilder.WriteString(line + "\n")
 	}
 

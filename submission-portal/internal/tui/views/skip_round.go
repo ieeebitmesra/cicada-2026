@@ -26,11 +26,12 @@ const (
 )
 
 type skipItem struct {
-	id      int
-	title   string
-	penalty float64
-	points  int
-	desc    string
+	id          int
+	title       string
+	penalty     float64
+	points      int
+	desc        string
+	description string
 }
 
 func (i skipItem) Title() string       { return i.title }
@@ -187,12 +188,17 @@ func (m *SkipRoundModel) Refresh() tea.Cmd {
 			continue
 		}
 		penalty := scoring.SkipCost(r.Points)
+		desc := fmt.Sprintf("Challenge Bounty: %d pts • Forfeits −%s pts permanently", r.Points, formatPoints(penalty))
+		if r.Description != "" {
+			desc = r.Description + fmt.Sprintf(" (Forfeits −%s pts)", formatPoints(penalty))
+		}
 		items = append(items, skipItem{
-			id:      r.ID,
-			title:   fmt.Sprintf("Round %d — %s", r.ID, r.Name),
-			penalty: penalty,
-			points:  r.Points,
-			desc:    fmt.Sprintf("Challenge Bounty: %d pts • Forfeits −%s pts permanently", r.Points, formatPoints(penalty)),
+			id:          r.ID,
+			title:       fmt.Sprintf("Round %d — %s", r.ID, r.Name),
+			penalty:     penalty,
+			points:      r.Points,
+			desc:        desc,
+			description: r.Description,
 		})
 	}
 	cmd := m.list.SetItems(items)
@@ -411,8 +417,11 @@ func (m SkipRoundModel) View() string {
 		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
 			Background(lipgloss.Color("#FF3860")).Padding(0, 1).Render(" ⚠️  CONFIRM ROUND BYPASS ")
 
-		targetInfo := fmt.Sprintf("\nTarget   : Round %d — %s\nPenalty  : −%s PTS (50%% of challenge value)\nStatus   : IRREVERSIBLE FORFEITURE\n",
-			m.selected.ID, m.selected.Name, formatPoints(m.cost))
+		targetInfo := fmt.Sprintf("\nTarget   : Round %d — %s\n", m.selected.ID, m.selected.Name)
+		if m.selected.Description != "" {
+			targetInfo += fmt.Sprintf("Details  : %s\n", m.selected.Description)
+		}
+		targetInfo += fmt.Sprintf("Penalty  : −%s PTS (50%% of challenge value)\nStatus   : IRREVERSIBLE FORFEITURE\n", formatPoints(m.cost))
 
 		targetStyled := lipgloss.NewStyle().
 			Bold(true).
@@ -464,6 +473,12 @@ func (m SkipRoundModel) View() string {
 			Padding(0, 2).
 			Render(fmt.Sprintf("⏩ ROUND %d BYPASS EXECUTED (−%s PTS DEDUCTION)", m.selected.ID, formatPoints(m.cost)))
 
+		summaryText := fmt.Sprintf("Target Challenge: Round %d — %s\n", m.selected.ID, m.selected.Name)
+		if m.selected.Description != "" {
+			summaryText += fmt.Sprintf("Details: %s\n", m.selected.Description)
+		}
+		summaryText += fmt.Sprintf("Penalty Incurred: −%s Points (50%% of challenge value)\nStatus: PERMANENTLY FORFEITED & LOCKED\nProof: Password-confirmed authorization.", formatPoints(m.cost))
+
 		summary := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#FF3860")).
@@ -471,8 +486,7 @@ func (m SkipRoundModel) View() string {
 			Foreground(lipgloss.Color("#F0F6FC")).
 			Padding(1, 2).
 			Width(w - 8).
-			Render(fmt.Sprintf("Target Challenge: Round %d — %s\nPenalty Incurred: −%s Points (50%% of challenge value)\nStatus: PERMANENTLY FORFEITED & LOCKED\nProof: Password-confirmed authorization.",
-				m.selected.ID, m.selected.Name, formatPoints(m.cost)))
+			Render(summaryText)
 
 		cta := lipgloss.NewStyle().
 			Bold(true).
@@ -507,8 +521,12 @@ func (m SkipRoundModel) renderSkipHUD(width int) string {
 	if it, ok := selected.(skipItem); ok {
 		detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F0F6FC")).
 			Render("\nSelected Target: "+Truncate(it.title, maxTextW-16)) + "\n")
+		if it.description != "" {
+			detail.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#94A3B8")).
+				Render(Truncate(it.description, maxTextW)) + "\n")
+		}
 		detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FF3860")).
-			Render(fmt.Sprintf("Forfeiture Cost : −%s PTS\n\n", formatPoints(it.penalty))))
+			Render(fmt.Sprintf("\nForfeiture Cost : −%s PTS\n\n", formatPoints(it.penalty))))
 	}
 
 	detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#58A6FF")).

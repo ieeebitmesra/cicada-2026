@@ -46,6 +46,7 @@ func newTestService(t *testing.T, db *store.DB) *scoring.Service {
 rounds:
   - id: 1
     name: "Web Infiltration"
+    description: "Exploit web authentication vulnerabilities to acquire tokens"
     points: 100
     is_active: true
     flag_hash: "3b006c0ab342be3e7ef08855eec1314902a20caeebeecb700147cb9a2bc2245e"
@@ -56,6 +57,7 @@ rounds:
         text: "SW5qZWN0IFNRTA=="
   - id: 2
     name: "Buffer Overflow"
+    description: "Smash stack frame boundaries to hijack control flow"
     points: 200
     is_active: true
     flag_hash: "4b006c0ab342be3e7ef08855eec1314902a20caeebeecb700147cb9a2bc2245e"
@@ -232,3 +234,120 @@ func TestRegisterModel(t *testing.T) {
 		t.Errorf("expected error on password mismatch")
 	}
 }
+
+func TestRoundDescriptionDisplay(t *testing.T) {
+	db := newTestDB(t)
+	svc := newTestService(t, db)
+	team := mustCreateTeam(t, db, "DescTeam")
+
+	// 1. SubmitFlagModel: description displayed in list view and HUD
+	sf := NewSubmitFlag(svc, team)
+	sf.SetSize(100, 30)
+	_ = sf.Refresh()
+	vSF := sf.View()
+	if !strings.Contains(vSF, "Exploit web authentication") {
+		t.Errorf("SubmitFlag view missing round description: %s", vSF)
+	}
+
+	// 2. RequestHintModel: description displayed in round selection
+	rh := NewRequestHint(svc, team)
+	rh.SetSize(100, 30)
+	_ = rh.Refresh()
+	vRH := rh.View()
+	if !strings.Contains(vRH, "Exploit web authentication") {
+		t.Errorf("RequestHint view missing round description: %s", vRH)
+	}
+
+	// 3. SkipRoundModel: description displayed in skip list
+	sk := NewSkipRound(svc, team)
+	sk.SetSize(100, 30)
+	_ = sk.Refresh()
+	vSK := sk.View()
+	if !strings.Contains(vSK, "Exploit web authentication") {
+		t.Errorf("SkipRound view missing round description: %s", vSK)
+	}
+
+	// 4. TeamStatusModel: description displayed in engagement matrix
+	ts := NewTeamStatus(svc, team)
+	ts.SetSize(100, 60)
+	_ = ts.Refresh()
+	vTS := ts.View()
+	if !strings.Contains(vTS, "Exploit web authentication") {
+		t.Errorf("TeamStatus view missing round description: %s", vTS)
+	}
+}
+
+func TestSolveLimitViewDisplay(t *testing.T) {
+	db := newTestDB(t)
+	yamlContent := `
+rounds:
+  - id: 11
+    name: "Campus Riddle Limited"
+    description: "Limited to first 3 solves"
+    points: 100
+    is_active: true
+    limit_solves: true
+    max_solves: 3
+    flag_hash: "3b006c0ab342be3e7ef08855eec1314902a20caeebeecb700147cb9a2bc2245e"
+`
+	roundsConfig, err := models.ParseRounds([]byte(yamlContent))
+	if err != nil {
+		t.Fatalf("ParseRounds: %v", err)
+	}
+	if err := db.UpsertRounds(roundsConfig.Rounds); err != nil {
+		t.Fatalf("UpsertRounds: %v", err)
+	}
+
+	teamA := mustCreateTeam(t, db, "Alpha")
+	teamB := mustCreateTeam(t, db, "Beta")
+	teamC := mustCreateTeam(t, db, "Gamma")
+	teamD := mustCreateTeam(t, db, "Delta")
+
+	flags := scoring.NewFlagValidator(256, 10, 0)
+	svc := scoring.NewService(db, roundsConfig, flags, 5*time.Minute)
+
+	// Submit 1 solve by teamA
+	_, err = svc.SubmitFlag(teamA, 11, "PANTHEON{valid_token_string_here_123}")
+	// Hash in config was 3b00... so let's directly record correct submission in DB for teamA
+	_, _ = db.RecordSubmission(teamA.ID, 11, "flag", true)
+
+	// Now check view for teamB: should show 2/3 LEFT
+	sf := NewSubmitFlag(svc, teamB)
+	sf.SetSize(100, 30)
+	_ = sf.Refresh()
+	vSF := sf.View()
+	if !strings.Contains(vSF, "2/3 LEFT") && !strings.Contains(vSF, "2/3 solves left") {
+		t.Errorf("SubmitFlag view missing remaining solve slots: %s", vSF)
+	}
+
+	// Check TeamStatus for teamB
+	ts := NewTeamStatus(svc, teamB)
+	ts.SetSize(100, 60)
+	_ = ts.Refresh()
+	vTS := ts.View()
+	if !strings.Contains(vTS, "2/3 LEFT") {
+		t.Errorf("TeamStatus view missing 2/3 LEFT badge: %s", vTS)
+	}
+
+	// Now record 2 more solves to fill the quota (total 3)
+	_, _ = db.RecordSubmission(teamB.ID, 11, "flag", true)
+	_, _ = db.RecordSubmission(teamC.ID, 11, "flag", true)
+
+	// Check view for teamD: should show QUOTA FULL
+	sfD := NewSubmitFlag(svc, teamD)
+	sfD.SetSize(100, 30)
+	_ = sfD.Refresh()
+	vSFQuota := sfD.View()
+	if !strings.Contains(vSFQuota, "QUOTA FULL") {
+		t.Errorf("SubmitFlag view missing QUOTA FULL badge when limit reached: %s", vSFQuota)
+	}
+
+	tsD := NewTeamStatus(svc, teamD)
+	tsD.SetSize(100, 60)
+	_ = tsD.Refresh()
+	vTSQuota := tsD.View()
+	if !strings.Contains(vTSQuota, "QUOTA FULL") {
+		t.Errorf("TeamStatus view missing QUOTA FULL badge when limit reached: %s", vTSQuota)
+	}
+}
+

@@ -11,12 +11,15 @@ CREATE TABLE teams (
 );
 
 CREATE TABLE rounds (
-    id          INTEGER PRIMARY KEY,
-    name        TEXT    NOT NULL,
-    points      INTEGER NOT NULL,
-    flag_hash   TEXT    NOT NULL,           -- SHA-256 of correct flag
-    is_active   BOOLEAN DEFAULT 1,
-    sort_order  INTEGER NOT NULL
+    id           INTEGER PRIMARY KEY,
+    name         TEXT    NOT NULL,
+    description  TEXT    NOT NULL DEFAULT '',
+    points       INTEGER NOT NULL,
+    flag_hash    TEXT    NOT NULL,           -- SHA-256 of correct flag
+    is_active    BOOLEAN DEFAULT 1,
+    limit_solves BOOLEAN DEFAULT 0,
+    max_solves   INTEGER DEFAULT 0,
+    sort_order   INTEGER NOT NULL
 );
 
 CREATE TABLE submissions (

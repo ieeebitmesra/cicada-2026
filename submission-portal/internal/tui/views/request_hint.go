@@ -30,6 +30,7 @@ type hintRoundItem struct {
 	id            int
 	title         string
 	desc          string
+	description   string
 	points        int
 	unlockedCount int
 	plainLeft     int
@@ -261,7 +262,13 @@ func (m *RequestHintModel) Refresh() tea.Cmd {
 		unlockedCount := usedP + usedE
 
 		var desc string
-		if unlockedCount > 0 {
+		if r.Description != "" {
+			if unlockedCount > 0 {
+				desc = fmt.Sprintf("[%d Intel] %s", unlockedCount, r.Description)
+			} else {
+				desc = r.Description
+			}
+		} else if unlockedCount > 0 {
 			desc = fmt.Sprintf("Unlocked: %d intel • Plain %d/%d • Encoded %d/%d left",
 				unlockedCount, max0(plainTotal-usedP), plainTotal, max0(encTotal-usedE), encTotal)
 		} else {
@@ -273,6 +280,7 @@ func (m *RequestHintModel) Refresh() tea.Cmd {
 			id:            r.ID,
 			title:         fmt.Sprintf("Round %d — %s", r.ID, r.Name),
 			desc:          desc,
+			description:   r.Description,
 			points:        r.Points,
 			unlockedCount: unlockedCount,
 			plainLeft:     max0(plainTotal - usedP),
@@ -561,8 +569,11 @@ func (m RequestHintModel) View() string {
 		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
 			Background(lipgloss.Color("#00F0FF")).Padding(0, 1).Render(" 🔒 AUTHORIZE INTEL CLEARANCE ")
 
-		targetInfo := fmt.Sprintf("\nTarget   : Round %d — %s\nHint Type: %s\nCost     : −%s PTS\n",
-			m.selected.ID, m.selected.Name, strings.ToUpper(m.typeSel), formatPoints(m.cost))
+		targetInfo := fmt.Sprintf("\nTarget   : Round %d — %s\n", m.selected.ID, m.selected.Name)
+		if m.selected.Description != "" {
+			targetInfo += fmt.Sprintf("Details  : %s\n", m.selected.Description)
+		}
+		targetInfo += fmt.Sprintf("Hint Type: %s\nCost     : −%s PTS\n", strings.ToUpper(m.typeSel), formatPoints(m.cost))
 
 		targetStyled := lipgloss.NewStyle().
 			Bold(true).
@@ -651,7 +662,12 @@ func (m RequestHintModel) renderUnlockedHintsBox(width int) string {
 		Render(fmt.Sprintf(" UNLOCKED INTEL ARCHIVE: Round %d — %s ", m.selected.ID, m.selected.Name))
 
 	var b strings.Builder
-	b.WriteString(title + "\n\n")
+	b.WriteString(title + "\n")
+	if m.selected.Description != "" {
+		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#94A3B8")).Render("  ↳ "+m.selected.Description) + "\n\n")
+	} else {
+		b.WriteString("\n")
+	}
 
 	if len(m.unlockedHints) == 0 {
 		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).
@@ -717,8 +733,12 @@ func (m RequestHintModel) renderRoundHUD(width int) string {
 	if it, ok := selected.(hintRoundItem); ok {
 		detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F0F6FC")).
 			Render("\nSelected Target: "+Truncate(it.title, maxTextW-16)) + "\n")
+		if it.description != "" {
+			detail.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#94A3B8")).
+				Render(Truncate(it.description, maxTextW)) + "\n")
+		}
 		detail.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#FFB800")).
-			Render(fmt.Sprintf("Challenge Value: +%d PTS\n\n", it.points)))
+			Render(fmt.Sprintf("\nChallenge Value: +%d PTS\n\n", it.points)))
 
 		// Fetch unlocked hints for highlighted round
 		unlocked, _ := m.svc.RoundUnlockedHints(m.team.ID, it.id)

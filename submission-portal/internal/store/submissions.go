@@ -49,6 +49,34 @@ func (db *DB) HasSolvedRound(teamID int64, roundID int) (bool, error) {
 	return n > 0, err
 }
 
+// CountSolvesForRound returns the number of distinct teams that have solved a round.
+func (db *DB) CountSolvesForRound(roundID int) (int, error) {
+	var n int
+	err := db.QueryRow(
+		`SELECT COUNT(DISTINCT team_id) FROM submissions WHERE round_id = ? AND is_correct = 1`,
+		roundID).Scan(&n)
+	return n, err
+}
+
+// SolvesCountMap returns a map of roundID -> number of solved teams across all rounds.
+func (db *DB) SolvesCountMap() (map[int]int, error) {
+	rows, err := db.Query(`SELECT round_id, COUNT(DISTINCT team_id) FROM submissions WHERE is_correct = 1 GROUP BY round_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	m := make(map[int]int)
+	for rows.Next() {
+		var roundID, count int
+		if err := rows.Scan(&roundID, &count); err != nil {
+			return nil, err
+		}
+		m[roundID] = count
+	}
+	return m, rows.Err()
+}
+
 // SolvedRoundIDs returns the sorted list of round ids solved by the team.
 func (db *DB) SolvedRoundIDs(teamID int64) ([]int, error) {
 	rows, err := db.Query(

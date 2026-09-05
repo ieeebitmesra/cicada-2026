@@ -19,6 +19,7 @@ allow_skips: true
 rounds:
   - id: 1
     name: "Round 1 — Warmup"
+    description: "Forensics & Steganography — Examine image chunk boundaries and telegraph signaling."
     points: 100
     is_active: true
     allow_hints: true
@@ -32,6 +33,7 @@ rounds:
 
   - id: 2
     name: "Round 2 — Crack it if you can"
+    description: "Audio Steganography — Analyze frequency domains and FFT block data."
     points: 150
     is_active: true
     allow_hints: true
@@ -45,6 +47,7 @@ rounds:
 
   - id: 3
     name: "Round 3 — The Server's Whisper"
+    description: "Network & Recon — Inspect HTTP server response headers."
     points: 800
     is_active: true
     allow_hints: false
@@ -58,7 +61,8 @@ rounds:
 
   - id: 4
     name: "Round 4 — The Seeker's Files"
-    points: 1500
+    description: "Ciphers & Audio — Decode Babylonian notation and reversed MIDI pitch mappings."
+    points: 2000
     is_active: true
     allow_hints: false
     allow_skips: false
@@ -71,6 +75,7 @@ rounds:
 
   - id: 5
     name: "Round 5 — The Gatekeeper's Beacon"
+    description: "Cryptanalysis — XOR ciphertext recovery with known header analysis."
     points: 300
     is_active: true
     allow_hints: false
@@ -84,6 +89,7 @@ rounds:
 
   - id: 6
     name: "Round 6 — Web: The Secure Portal"
+    description: "Web Security — Auth token tampering and privilege escalation."
     points: 350
     is_active: true
     allow_hints: false
@@ -97,6 +103,7 @@ rounds:
 
   - id: 7
     name: "Round 7 — Web: Global Megaphone"
+    description: "Web Security — Template injection filter evasion via nested payloads."
     points: 400
     is_active: true
     allow_hints: false
@@ -110,6 +117,7 @@ rounds:
 
   - id: 8
     name: "Round 8 — Binary: Stonks Trading AI"
+    description: "Binary Exploitation — Format string vulnerability memory disclosure."
     points: 450
     is_active: true
     allow_hints: false
@@ -123,6 +131,7 @@ rounds:
 
   - id: 9
     name: "Round 9 — Binary: The Labyrinth"
+    description: "Binary Exploitation — Out-of-bounds memory write and state corruption."
     points: 500
     is_active: true
     allow_hints: false
@@ -136,6 +145,7 @@ rounds:
 
   - id: 10
     name: "Round 10 — Crypto: Sphinx of the Pantheon"
+    description: "Cryptography — Chosen-plaintext attack against Vigenère oracle."
     points: 600
     is_active: true
     allow_hints: false
@@ -146,3 +156,75 @@ rounds:
         text: "Confront the Sphinx at https://crypto-sphinx-oracle.onrender.com. Query the oracle with known plaintexts to determine the Vigenere key ZEUS, then decrypt the offering OLYMPIANNECTAR."
       - type: encoded
         text: "VmlnZW5lcmUgY2hvc2VuLXBsYWludGV4dCBvcmFjbGU6IGVuY3J5cHQga25vd24gc2VxdWVuY2VzIHRvIGV4dHJhY3Qga2V5IFpFVVMsIHRoZW4gZGVjcnlwdCBPTFlNUElBTk5FQ1RBUi4="
+
+  - id: 11
+    name: "Round 11 — Campus Riddle 1"
+    description: "Campus Riddle — The House Where Managers Are Made"
+    points: 100
+    is_active: true
+    allow_hints: false
+    allow_skips: false
+    limit_solves: true
+    max_solves: 3
+    flag_hash: "230c1efc348ce370bbf1ef6d59b02ca0b17ba9501486832fddb7f06b468fd44f"
+    hints: []
+
+  - id: 12
+    name: "Round 12 — Campus Riddle 2"
+    description: "Campus Riddle — The Hue of Embers"
+    points: 100
+    is_active: true
+    allow_hints: false
+    allow_skips: false
+    limit_solves: true
+    max_solves: 3
+    flag_hash: "9b02c283ed1a5449b5585adaf2fd48b4c616c9e282b23ffa1e4cdfbe23b97d3b"
+    hints: []
+
+  - id: 13
+    name: "Round 13 — Campus Riddle 3"
+    description: "Campus Riddle — Sweat Replaces a Library's Decree"
+    points: 100
+    is_active: true
+    allow_hints: false
+    allow_skips: false
+    limit_solves: true
+    max_solves: 3
+    flag_hash: "05d831926e8dc109a73c416c183ffa954e4e186c9af2aa2bf242f4fc258d7f3c"
+    hints: []
+
+  - id: 14
+    name: "Round 14 — Campus Riddle 4"
+    description: "Campus Riddle — Near the Ring of Echoes"
+    points: 100
+    is_active: true
+    allow_hints: false
+    allow_skips: false
+    limit_solves: true
+    max_solves: 3
+    flag_hash: "7e38dfb757ebd85dce2480ecdfbfe26fd0898226833f7430867fa9434c00056a"
+    hints: []
+
+  - id: 15
+    name: "Round 15 — Campus Riddle 5"
+    description: "Campus Riddle — The Digital Hive"
+    points: 100
+    is_active: true
+    allow_hints: false
+    allow_skips: false
+    limit_solves: true
+    max_solves: 3
+    flag_hash: "66eccb32e6ed59c2d4a7d973b4f88df966e4653192ff2f84ce39af5d94c0efb1"
+    hints: []
+
+  - id: 16
+    name: "Round 16 — Campus Riddle 6"
+    description: "Campus Riddle — Flanked by Two Silent Giants"
+    points: 100
+    is_active: true
+    allow_hints: false
+    allow_skips: false
+    limit_solves: true
+    max_solves: 3
+    flag_hash: "034fc72a72b6f0c2f6fb11d8f95518484f5db3bb469b7b36dca7fd9b07ec1c05"
+    hints: []

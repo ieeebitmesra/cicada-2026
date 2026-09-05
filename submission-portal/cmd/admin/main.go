@@ -294,17 +294,25 @@ func cmdRounds(args []string) error {
 			return err
 		}
 		w := tabwriter.NewWriter(os.Stdout, 2, 4, 2, ' ', 0)
-		fmt.Fprintln(w, "ID\tNAME\tPOINTS\tACTIVE\tFLAG HASH (first 12)")
+		fmt.Fprintln(w, "ID\tNAME\tDESCRIPTION\tPOINTS\tACTIVE\tLIMIT\tFLAG HASH (first 12)")
 		for _, r := range rounds {
 			active := "no"
 			if r.IsActive {
 				active = "yes"
 			}
+			limit := "—"
+			if r.LimitSolves && r.MaxSolves > 0 {
+				limit = fmt.Sprintf("max %d", r.MaxSolves)
+			}
 			short := r.FlagHash
 			if len(short) > 12 {
 				short = short[:12]
 			}
-			fmt.Fprintf(w, "%d\t%s\t%d\t%s\t%s…\n", r.ID, r.Name, r.Points, active, short)
+			desc := r.Description
+			if len(desc) > 35 {
+				desc = desc[:32] + "..."
+			}
+			fmt.Fprintf(w, "%d\t%s\t%s\t%d\t%s\t%s\t%s…\n", r.ID, r.Name, desc, r.Points, active, limit, short)
 		}
 		return w.Flush()
 
