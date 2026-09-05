@@ -3,8 +3,8 @@
 # Feature flags (global toggles):
 # Set allow_hints: false to restrict/disable hints across all rounds.
 # Set allow_skips: false to restrict/disable round skipping across all rounds.
-allow_hints: false
-allow_skips: false
+allow_hints: true
+allow_skips: true
 
 # flag_hash is the SHA-256 hex digest of the exact flag string (case-sensitive).
 # Generate it with:
@@ -22,34 +22,34 @@ rounds:
     points: 100
     is_active: true
     allow_hints: true
-    allow_skips: true
+    allow_skips: false
     flag_hash: "2574da35e604fe70836157593d6171013b11042c231c5245ee9682f1a57335c2"
     hints:
       - type: plain
-        text: "Start by looking at the metadata of the provided file."
+        text: "It’s hard to spot a ghost in a blizzard. Try looking at the negative, or throw a bucket of digital paint on the background."
       - type: encoded
-        text: "VGhlIGFuc3dlciBpcyBoaWRkZW4gaW4gcGxhaW4gc2lnaHQu"
+        text: "JTVWJTM2JTIwJTM2JTMxJTIwJTM2JTM5JTIwJTM3JTMyJTIwJTM2JTM1JTIwJTM2JTM3JTIwJTMyJTMwJTIwJTM2JTM3JTIwJTM3JTM1JTIwJTM3JTMyJTIwJTMyJTMwJTIwJTM2JTM2JTIwJTM2JTMxJTIwJTM2JTMyJTIwJTM2JTYxJTIwJTMyJTMwJTIwJTM2JTM3JTIwJTM2JTMyJTIwJTMyJTMwJTIwJTM2JTM2JTIwJTM3JTMyJTIwJTM3JTMyJTIwJTMyJTMwJTIwJTM2JTM3JTIwJTM3JTM1JTIwJTM3JTMyJTIwJTMyJTMwJTIwJTM3JTM0JTIwJTM3JTM1JTIwJTM2JTMyJTIwJTM2JTM2JTIwJTM2JTM3JTIwJTMyJTY1"
 
   - id: 2
     name: "Round 2 — Crack it if you can"
     points: 150
     is_active: true
     allow_hints: true
-    allow_skips: true
+    allow_skips: false
     flag_hash: "2fb64ebc726bc0188f1abea53539644e984fdfc1ae944cc770debaaef52485da"
     hints:
       - type: plain
-        text: "The cipher dates back to Rome."
+        text: "Don't reinvent the wheel analyzing frequency domains. The flag was embedded using FFT Block Steganography. You can find the exact CLI extraction tool here:https://gist.github.com/aj-1729/9c6a477425dbb253a0a22f645ee329ff"
       - type: encoded
-        text: "PNZFR VF ABG FRphevgl."
+        text: "TlRJMlpETTVNekUyWXpaa05tTTJZMlkzTmprME1qWmpOak0wTnpZalltRTJOVFUzTkdVM016VmFOVGc0UkRablVUVTFOVGgwYVRZc05EazBPRFV5Tm1ZMVlUVXpOREkyTnpJMVlUVTRObUkzTlE9PQ=="
 
   - id: 3
-    name: "Round 3 — "
-    points: 200
+    name: "Round 3 — The Hidden Baby"
+    points: 300
     is_active: true
-    allow_hints: true
-    allow_skips: true
-    flag_hash: "REPLACE_WITH_SHA256_HEX"
+    allow_hints: false
+    allow_skips: false
+    flag_hash: "replace_with_sha256_hex"
     hints:
       - type: plain
         text: "Check the response headers before the page content."
@@ -59,10 +59,10 @@ rounds:
   - id: 4
     name: "Round 4 — The Seeker's Files"
     points: 300
-    is_active: true
+    is_active: false
     allow_hints: false
     allow_skips: false
-    flag_hash: "REPLACE_WITH_SHA256_HEX"
+    flag_hash: "9c7f970fcc02aa84c6798129ea76c12b411c81ca8cf49e3eb8c1b8c61222f3e5"
     hints:
       - type: plain
         text: "The numbers are Babylonian; the music is not what it seems."
