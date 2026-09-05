@@ -19,7 +19,7 @@ allow_skips: true
 rounds:
   - id: 1
     name: "Round 1 — Warmup"
-    description: "Forensics & Steganography — Examine image chunk boundaries and telegraph signaling."
+    description: ""
     points: 100
     is_active: true
     allow_hints: true
@@ -33,7 +33,7 @@ rounds:
 
   - id: 2
     name: "Round 2 — Crack it if you can"
-    description: "Audio Steganography — Analyze frequency domains and FFT block data."
+    description: ""
     points: 150
     is_active: true
     allow_hints: true
@@ -47,7 +47,7 @@ rounds:
 
   - id: 3
     name: "Round 3 — The Server's Whisper"
-    description: "Network & Recon — Inspect HTTP server response headers."
+    description: ""
     points: 800
     is_active: true
     allow_hints: false
@@ -61,7 +61,7 @@ rounds:
 
   - id: 4
     name: "Round 4 — The Seeker's Files"
-    description: "Ciphers & Audio — Decode Babylonian notation and reversed MIDI pitch mappings."
+    description: ""
     points: 2000
     is_active: true
     allow_hints: false
@@ -75,7 +75,7 @@ rounds:
 
   - id: 5
     name: "Round 5 — The Gatekeeper's Beacon"
-    description: "Cryptanalysis — XOR ciphertext recovery with known header analysis."
+    description: ""
     points: 300
     is_active: true
     allow_hints: false
@@ -89,7 +89,7 @@ rounds:
 
   - id: 6
     name: "Round 6 — Web: The Secure Portal"
-    description: "Web Security — Auth token tampering and privilege escalation."
+    description: ""
     points: 350
     is_active: true
     allow_hints: false
@@ -103,7 +103,7 @@ rounds:
 
   - id: 7
     name: "Round 7 — Web: Global Megaphone"
-    description: "Web Security — Template injection filter evasion via nested payloads."
+    description: ""
     points: 400
     is_active: true
     allow_hints: false
@@ -117,7 +117,7 @@ rounds:
 
   - id: 8
     name: "Round 8 — Binary: Stonks Trading AI"
-    description: "Binary Exploitation — Format string vulnerability memory disclosure."
+    description: ""
     points: 450
     is_active: true
     allow_hints: false
@@ -131,7 +131,7 @@ rounds:
 
   - id: 9
     name: "Round 9 — Binary: The Labyrinth"
-    description: "Binary Exploitation — Out-of-bounds memory write and state corruption."
+    description: ""
     points: 500
     is_active: true
     allow_hints: false
@@ -145,7 +145,7 @@ rounds:
 
   - id: 10
     name: "Round 10 — Crypto: Sphinx of the Pantheon"
-    description: "Cryptography — Chosen-plaintext attack against Vigenère oracle."
+    description: ""
     points: 600
     is_active: true
     allow_hints: false
@@ -159,72 +159,134 @@ rounds:
 
   - id: 11
     name: "Round 11 — Campus Riddle 1"
-    description: "Campus Riddle — The House Where Managers Are Made"
+    description: |-
+      I face the house where managers are made,
+      Standing where a bent road forks in the shade.
+      Once a year, veins offer up their red,
+      Though on ordinary days, quiet footsteps tread.
+      Straight ahead, past quarters where professors dwell,
+      Third-years rest in twin numbers I won't tell.
+      Further still, the second-years lie in wait,
+      And first-years' home I pass before this gate.
+      The official wheels of campus roll through me too,
+      On their way from the yard to the exit view.
+
+      Where am I?
     points: 100
     is_active: true
     allow_hints: false
     allow_skips: false
     limit_solves: true
     max_solves: 3
-    flag_hash: "230c1efc348ce370bbf1ef6d59b02ca0b17ba9501486832fddb7f06b468fd44f"
+    flag_hash: "de3d67fc56a893697cc8c55913c5729d43d7734ba52415d09959c81a342b52c6"
     hints: []
 
   - id: 12
     name: "Round 12 — Campus Riddle 2"
-    description: "Campus Riddle — The Hue of Embers"
+    description: |-
+      Among many wheels that serve the hungry crowd,
+      One glows in a hue that warns you to stop,
+      The color of embers, not gold, not green —
+      And there, fresh fruits and cold juices are seen.
+      Right across the road, first-years find their bed,
+      While I dish out flavor instead.
+
+      Where am I?
     points: 100
     is_active: true
     allow_hints: false
     allow_skips: false
     limit_solves: true
     max_solves: 3
-    flag_hash: "9b02c283ed1a5449b5585adaf2fd48b4c616c9e282b23ffa1e4cdfbe23b97d3b"
+    flag_hash: "c82fe4299004bde87ad7ae402b023be9d0a6c3f4f97ca4bc25eaccec5ae104fc"
     hints: []
 
   - id: 13
     name: "Round 13 — Campus Riddle 3"
-    description: "Campus Riddle — Sweat Replaces a Library's Decree"
+    description: |-
+      Not the gate, but near enough to see,
+      Where sweat replaces a library's decree.
+      Among five paths a student may pick,
+      One's a joke, a lazy trick —
+      No papers, no thought, just huff and puff,
+      The easy road when books get tough.
+      One voice commands here, strict yet sly,
+      Cocky one moment, warm by and by.
+      A younger soul lifts spirits too,
+      Guides the iron, sees you through.
+
+      Where am I?
     points: 100
     is_active: true
     allow_hints: false
     allow_skips: false
     limit_solves: true
     max_solves: 3
-    flag_hash: "05d831926e8dc109a73c416c183ffa954e4e186c9af2aa2bf242f4fc258d7f3c"
+    flag_hash: "ff67d198dd1bedfba0257882b8724125dae5ce3fd115aa5bbb503786bea5c649"
     hints: []
 
   - id: 14
     name: "Round 14 — Campus Riddle 4"
-    description: "Campus Riddle — Near the Ring of Echoes"
+    description: |-
+      Near the ring where echoes gather round,
+      Steam rises where chatter is always found.
+      Once I offered three ways to pay,
+      A middle path has walked away —
+      Now only two coins will do the trade,
+      The smallest and the largest stayed.
+      Sip and gather, the campus's favorite brew,
+      Find the stall that all students queue.
+
+      Where am I?
     points: 100
     is_active: true
     allow_hints: false
     allow_skips: false
     limit_solves: true
     max_solves: 3
-    flag_hash: "7e38dfb757ebd85dce2480ecdfbfe26fd0898226833f7430867fa9434c00056a"
+    flag_hash: "98c42fed97184d396473919e0ad43339f4ebc81c9f302213ad29d16f5616c721"
     hints: []
 
   - id: 15
     name: "Round 15 — Campus Riddle 5"
-    description: "Campus Riddle — The Digital Hive"
+    description: |-
+      A home it once was, walls that used to rest,
+      Now it logs your leave, your ticket request.
+      The first door you open when you first arrive,
+      Your gateway to grades, your digital hive.
+      Complaints and requests, all flow through my door,
+      Sick days recorded, and so much more.
+      Nearby, some eyes gaze from far and wide,
+      Reading the earth without stepping outside.
+
+      Where am I?
     points: 100
     is_active: true
     allow_hints: false
     allow_skips: false
     limit_solves: true
     max_solves: 3
-    flag_hash: "66eccb32e6ed59c2d4a7d973b4f88df966e4653192ff2f84ce39af5d94c0efb1"
+    flag_hash: "7598aa658e06596a3b6f8ace3f79244b0c535d017c8d2b74d6ac1424fe6903e7"
     hints: []
 
   - id: 16
     name: "Round 16 — Campus Riddle 6"
-    description: "Campus Riddle — Flanked by Two Silent Giants"
+    description: |-
+      Tucked away, flanked by two silent giants,
+      A tiny market hides in quiet defiance.
+      Our college's name ends in a word so grand,
+      Strip away its final syllable's strand —
+      What's left behind will start my name,
+      Cold bottles fizz with a word that's tame —
+      Not hard, not sharp, but gentle to the tongue,
+      Add it after, and the name is sung.
+
+      Where am I?
     points: 100
     is_active: true
     allow_hints: false
     allow_skips: false
     limit_solves: true
     max_solves: 3
-    flag_hash: "034fc72a72b6f0c2f6fb11d8f95518484f5db3bb469b7b36dca7fd9b07ec1c05"
+    flag_hash: "4177e23d823eb761465a58d3a9c2f3e523b1c8d43899b659e6aa1c2c21b39597 "
     hints: []
