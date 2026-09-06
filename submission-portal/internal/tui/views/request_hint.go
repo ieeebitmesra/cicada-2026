@@ -169,25 +169,29 @@ type RequestHintModel struct {
 func NewRequestHint(svc *scoring.Service, team *models.Team) RequestHintModel {
 	l := list.New([]list.Item{}, hintRoundDelegate{width: 54}, 0, 0)
 	l.Title = "SELECT TARGET CHALLENGE FOR INTEL"
-	l.SetShowStatusBar(false)
+	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(false)
 	l.SetShowHelp(false)
+	l.SetShowPagination(true)
 	l.Styles.Title = lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("#0B0F19")).
 		Background(lipgloss.Color("#00F0FF")).
 		Padding(0, 1)
+	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00F0FF")).Padding(0, 1)
 
 	t := list.New([]list.Item{}, hintTypeDelegate{width: 54}, 0, 0)
 	t.Title = "SELECT INTEL CLEARANCE TYPE TO REQUEST"
-	t.SetShowStatusBar(false)
+	t.SetShowStatusBar(true)
 	t.SetFilteringEnabled(false)
 	t.SetShowHelp(false)
+	t.SetShowPagination(true)
 	t.Styles.Title = lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("#0B0F19")).
 		Background(lipgloss.Color("#FFB800")).
 		Padding(0, 1)
+	t.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFB800")).Padding(0, 1)
 
 	passInp := textinput.New()
 	passInp.Placeholder = "Enter your team password to authorize"

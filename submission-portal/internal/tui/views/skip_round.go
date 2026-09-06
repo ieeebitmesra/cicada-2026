@@ -107,14 +107,16 @@ type SkipRoundModel struct {
 func NewSkipRound(svc *scoring.Service, team *models.Team) SkipRoundModel {
 	l := list.New([]list.Item{}, skipDelegate{width: 54}, 0, 0)
 	l.Title = "SELECT CHALLENGE TO STRATEGICALLY BYPASS"
-	l.SetShowStatusBar(false)
+	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(false)
 	l.SetShowHelp(false)
+	l.SetShowPagination(true)
 	l.Styles.Title = lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("#0B0F19")).
 		Background(lipgloss.Color("#FFB800")).
 		Padding(0, 1)
+	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFB800")).Padding(0, 1)
 
 	passInp := textinput.New()
 	passInp.Placeholder = "Enter your team password to confirm"
@@ -413,6 +415,11 @@ func (m SkipRoundModel) View() string {
 			}
 		}
 
+		keyHelp := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#8B949E")).
+			Render("\n[↑/↓/j/k] Scroll Challenges  •  [PgUp/PgDn] Page  •  [Enter] Select  •  [Esc] Back to Deck")
+		body = body + keyHelp
+
 	case skipPhaseConfirm:
 		header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#0B0F19")).
 			Background(lipgloss.Color("#FF3860")).Padding(0, 1).Render(" ⚠️  CONFIRM ROUND BYPASS ")
@@ -522,8 +529,13 @@ func (m SkipRoundModel) renderSkipHUD(width int) string {
 	var detail strings.Builder
 	selected := m.list.SelectedItem()
 	if it, ok := selected.(skipItem); ok {
-		detail.WriteString(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F0F6FC")).
-			Render("\nSelected Target: "+Truncate(it.title, maxTextW-16)) + "\n")
+		idx := m.list.Index() + 1
+		total := len(m.list.Items())
+		posTag := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#FFB800")).
+			Render(fmt.Sprintf("[%d of %d]", idx, total))
+
+		detail.WriteString("\n" + posTag + " " + lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#F0F6FC")).
+			Render("Target: "+Truncate(it.title, maxTextW-16)) + "\n")
 		if it.description != "" {
 			detail.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#94A3B8")).
 				Render(Truncate(it.description, maxTextW)) + "\n")

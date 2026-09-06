@@ -129,14 +129,16 @@ type SubmitFlagModel struct {
 func NewSubmitFlag(svc *scoring.Service, team *models.Team) SubmitFlagModel {
 	l := list.New([]list.Item{}, flagRoundDelegate{width: 54}, 0, 0)
 	l.Title = "SELECT TARGET CHALLENGE"
-	l.SetShowStatusBar(false)
+	l.SetShowStatusBar(true)
 	l.SetFilteringEnabled(false)
 	l.SetShowHelp(false)
+	l.SetShowPagination(true)
 	l.Styles.Title = lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("#0B0F19")).
 		Background(lipgloss.Color("#00B4D8")).
 		Padding(0, 1)
+	l.Styles.PaginationStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#00B4D8")).Padding(0, 1)
 
 	input := textinput.New()
 	input.Placeholder = "PANTHEON{...}"

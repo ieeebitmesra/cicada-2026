@@ -43,8 +43,18 @@ func VisualWidth(s string) int {
 	return lipgloss.Width(stripped)
 }
 
-// Truncate ensures text never auto-wraps inside bordered panels (Golden Rule #2).
+// SingleLine collapses multi-line text into a single space-separated line.
+func SingleLine(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", " ")
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\t", " ")
+	fields := strings.Fields(s)
+	return strings.Join(fields, " ")
+}
+
+// Truncate ensures text never auto-wraps inside bordered panels and stays strictly on a single line (Golden Rule #2).
 func Truncate(s string, maxLen int) string {
+	s = SingleLine(s)
 	if maxLen < 1 {
 		return ""
 	}
