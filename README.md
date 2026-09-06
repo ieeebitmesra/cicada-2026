@@ -1,7 +1,7 @@
-# IEEE CTF Event Platform
+# IEEE-IET CTF Event Platform
 
 Two server-side platforms with defense-in-depth (7 security layers), per
-`ieee_ctf_platform_plan.md`:
+`ieee-iet_ctf_platform_plan.md`:
 
 ```
 ┌────────────────────────────┐     ┌─────────────────────────────────┐
