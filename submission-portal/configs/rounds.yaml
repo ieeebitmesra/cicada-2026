@@ -25,6 +25,7 @@ rounds:
     allow_hints: true
     allow_skips: true
     flag_hash: "cd510927fc22ced613463b1132b817f9a0dc28ee5e0b101fcd01774f3258523a"
+    skip_text: "Proceed to Round 2 — Crack it if you can https://welcome-deb.pages.dev"
     hints:
       - type: plain
         text: "Seek past where the curtain falls—beyond the wall that marks the end (IEND). Listen to the tapping of the telegraph wire: dots and dashes in the dark. The Roman emperor's key is yours."
@@ -39,6 +40,7 @@ rounds:
     allow_hints: true
     allow_skips: true
     flag_hash: "2fb64ebc726bc0188f1abea53539644e984fdfc1ae944cc770debaaef52485da"
+    skip_text: "Proceed to Round 3 — The Server's Whisper https://kryptoscicada.blogspot.com/"
     hints:
       - type: plain
         text: "Don't reinvent the wheel analyzing frequency domains. The flag was embedded using FFT Block Steganography. You can find the exact CLI extraction tool here: https://gist.github.com/aj-1729/9c6a477425dbb253a0a22f645ee329ff"
@@ -50,112 +52,120 @@ rounds:
     description: ""
     points: 800
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     flag_hash: "0617e673e01b775dae1f379f634ecb1975a2c52acb4e5c0f08361f008ad788ea"
+    skip_text: "Proceed to Round 4 — The Seeker's Files https://qrkabolk.pages.dev/ key:20092002194507165301101201319690815"
     hints:
       - type: plain
-        text: "Check the response headers before the page content."
+        text: "The cipher is a book , you got the book right. See the book and stop the crying baby."
       - type: encoded
-        text: "5345525645523A206964656E746966792074686520686561646572"
+        text: "4c6f6f6b20626568696e6420746865207363656e65732c20776865726520616e20616e6369656e7420656d7069726520636f756e74732077697468207765646765732e204c65742074686520626f756e64206c656176657320677569646520796f757220706174682e"
 
   - id: 4
     name: "Round 4 — The Seeker's Files"
     description: ""
     points: 2000
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     flag_hash: "17e9dacb464e40776535fe3160b14a61fdc7d32faf9078154facf3b2e274452a"
+    skip_text: "Proceed to Round 17 - https://17291383220683.pages.dev/"
     hints:
       - type: plain
-        text: "The numbers are Babylonian; the music is not what it seems. 26 pitches map directly to the alphabet."
+        text: "The numbers are Babylonian; the music is not what it seems. 26 pitches map directly to the alphabet.get the url from the ingredients you have Julius in the book"
       - type: encoded
-        text: "YmFieWxvbiArIG1pZGkgPSBwbGF5IGl0IGJhY2t3YXJkcw=="
+        text: "79 108 100 32 119 101 100 103 101 115 32 99 111 117 110 116 46 32 65 32 102 97 108 115 101 32 109 101 108 111 100 121 32 104 105 100 101 115 32 50 54 32 109 97 115 107 101 100 32 108 101 116 116 101 114 115 46 32 77 105 120 32 116 104 101 32 101 109 112 101 114 111 114 32 97 110 100 32 116 104 101 32 98 111 111 107 46"
 
   - id: 5
     name: "Round 5 — The Gatekeeper's Beacon"
     description: ""
     points: 300
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     flag_hash: "2abaa26fc0e5141e712b67a1b947448e6facdb28f18b907d383d5988b3adec4a"
+    skip_text: "Proceed to Round 6 — Web: The Secure Portal https://web-secure-portal.onrender.com"
     hints:
       - type: plain
         text: "A known flag always starts with 'PANTHEON{'. XOR the beginning of the ciphertext with the known header to recover the 8-character repeating key."
       - type: encoded
-        text: "S25vd24gcGxhaW50ZXh0IFhPUiByZWNvdmVycyB0aGUgOC1ieXRlIGtleSBIRVJNRVMyNg=="
+        text: "010101000110100001100101001000000110010001101001011101100110100101101110011001010010000001100010011000010110111001101110011001010111001000100000011011100110010101110110011001010111001000100000011000110110100001100001011011100110011101100101011100110010111000100000010000110111001001101111011100110111001100100000011101000110100001100101001000000110101101101110011011110111011101101110001000000111011101101001011101000110100000100000011101000110100001100101001000000110010001100001011100100110101100100000011101000110111100100000011001100110100101101110011001000010000001110100011010000110010100100000011001010110100101100111011010000111010001100110011011110110110001100100001000000111000001100001011101000110100000101110"
 
   - id: 6
     name: "Round 6 — Web: The Secure Portal"
     description: ""
     points: 350
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     flag_hash: "282143fcc7bddb406283fa253d89a1eae330c5b4834a975092adcb9d3fb347a0"
+    skip_text: "Proceed to Round 7 — Web: Global Megaphone https://web-global-megaphone.onrender.com"
     hints:
       - type: plain
         text: "Access the portal at https://web-secure-portal.onrender.com. The login page and quantum errors are a decoy. Check the auth_token cookie issued after registration."
       - type: encoded
-        text: "RGVjb2RlIHRoZSBiYXNlNjQgYXV0aF90b2tlbiBjb29raWUsIGNoYW5nZSB0aGUgcm9sZSB0byBhZG1pbiwgYW5kIHJlbG9hZCB0aGUgcm9vdCBkYXNoYm9hcmQu"
+        text: "49676e6f726520746865207175616e74756d20696c6c7573696f6e73206174207468652066726f6e7420646f6f722e20496e737065637420746865206372756d62206c6566742075706f6e20796f757220656e7472792c20656c657661746520796f757220626c6f6f646c696e6520746f2074686520686967686573742072616e6b2c20616e642072657475726e20746f2074686520626567696e6e696e672e"
 
   - id: 7
     name: "Round 7 — Web: Global Megaphone"
     description: ""
     points: 400
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     flag_hash: "3364059a1cd262b1303f3d909895584fede8cae63733bccbc9b640e7eba033aa"
+    skip_text: "Proceed to Round 8 — Binary: Stonks Trading AI https://pwn-stonks-fmt.onrender.com"
     hints:
       - type: plain
         text: "Access the megaphone at https://web-global-megaphone.onrender.com. The sanitization filter deletes 'Flag' only once without recursing. Use a nested payload like {{ .FlFlagag }}."
       - type: encoded
-        text: "Tm9uLXJlY3Vyc2l2ZSBzdHJpbmcgcmVwbGFjZTogbmVzdCB0aGUgZm9yYmlkZGVuIHdvcmQgaW5zaWRlIGl0c2VsZi4="
+        text: "124 150 145 040 147 165 141 162 144 040 163 116 162 151 153 145 163 040 142 165 116 040 157 156 143 145 056 040 124 157 040 163 156 145 141 153 040 164 150 145 040 146 157 162 142 151 144 144 145 156 040 151 144 157 154 040 160 141 163 164 040 164 150 145 040 147 141 164 145 163 054 040 171 157 165 040 155 165 163 164 040 163 167 141 154 154 157 167 040 151 164 040 167 151 164 150 151 156 040 151 164 163 040 157 167 156 040 162 145 146 154 145 143 164 151 157 156 056 040 106 055 154 055 050 106 154 141 147 051 055 141 055 147 056"
 
   - id: 8
     name: "Round 8 — Binary: Stonks Trading AI"
     description: ""
     points: 450
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     flag_hash: "3a0f0471d1a600829d809954e32612d4fd4f76e5c66e3182fafeab7bbb254cce"
+    skip_text: "Proceed to Round 9 — Binary: The Labyrinth https://pwn-maze-oob-1.onrender.com"
     hints:
       - type: plain
         text: "Connect to the terminal at https://pwn-stonks-fmt.onrender.com. The API token input is evaluated directly inside printf(). Pass format specifiers like %p to leak the base64 secret from the stack."
       - type: encoded
-        text: "Rm9ybWF0IHN0cmluZyB2dWxuZXJhYmlsaXR5OiBzdXBwbHkgJXAuJXAucC4uLiB0byBsZWFrIHRoZSBzdGFjayBtZW1vcnkgY29udGFpbmluZyB0aGUgYmFzZTY0IGZsYWcu"
+        text: "84 104 101 32 111 114 97 99 108 101 32 98 108 105 110 100 108 121 32 101 99 104 111 101 115 32 121 111 117 114 32 116 111 110 103 117 101 46 32 83 112 101 97 107 32 116 104 101 32 108 97 110 103 117 97 103 101 32 111 102 32 112 111 105 110 116 101 114 115 32 97 110 100 32 112 101 114 99 101 110 116 115 44 32 97 110 100 32 119 97 116 99 104 32 105 116 32 98 108 101 101 100 32 116 104 101 32 104 105 100 100 101 110 32 115 116 97 99 107 32 102 114 111 109 32 105 116 115 32 109 101 109 111 114 121 46"
 
   - id: 9
     name: "Round 9 — Binary: The Labyrinth"
     description: ""
     points: 500
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     flag_hash: "6653efdf27672ed018ac2f5e72b53836c527fa4b6903d05a5fbb630319b01846"
+    skip_text: "Proceed to Round 10 — Crypto: Sphinx of the Pantheon https://crypto-sphinx-oracle.onrender.com"
     hints:
       - type: plain
         text: "Navigate the maze at https://pwn-maze-oob-1.onrender.com. The player coordinates have no bounds checking. Move out of bounds and drop breadcrumbs ('p') to overwrite the win_flag variable in memory."
       - type: encoded
-        text: "T3V0IG9mIGJvdW5kcyB3cml0ZTogbW92ZSBwYXN0IHRoZSAzMHg5MCBtYXAgYm91bmRhcnkgdG8gY29ycnVwdCB0aGUgYWRqYWNlbnQgd2luX2ZsYWcgaW50ZWdlci4="
+        text: "=4ycmV2YgQGIvRXdgEWMwEHIhl2XgQ3clNGIlNGdl52byVGIvBHI1h2chRXYkVmchBHIjVGdvxWZuR3c0VHItVGd0l2blBGIy92YnJHIj9GcilGZy5SZi5WYsFmdnVmbiVXclJXZsFmIhlGZhJ3byFGIhhWY0FGIyFmZh1WbHJV"
 
   - id: 10
     name: "Round 10 — Crypto: Sphinx of the Pantheon"
     description: ""
     points: 600
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     flag_hash: "08bc315fca470a2d031bf61e74fcbe7d930371f38ba259db79ad7c426fffdf37"
+    skip_text: "Proceed to Campus Riddles (Rounds 11–16)"
     hints:
       - type: plain
         text: "Confront the Sphinx at https://crypto-sphinx-oracle.onrender.com. Query the oracle with known plaintexts to determine the Vigenere key ZEUS, then decrypt the offering OLYMPIANNECTAR."
       - type: encoded
-        text: "VmlnZW5lcmUgY2hvc2VuLXBsYWludGV4dCBvcmFjbGU6IGVuY3J5cHQga25vd24gc2VxdWVuY2VzIHRvIGV4dHJhY3Qga2V5IFpFVVMsIHRoZW4gZGVjcnlwdCBPTFlNUElBTk5FQ1RBUi4="
+        text: "01000110011001010110010101100100001000000111010001101000011001010010000001100010011001010110000101110011011101000010000001100001001000000111001101110100011100100110100101101110011001110010000001101111011001100010000001110010011001010111000001100101011000010111010001101001011011100110011100100000011001010110001101101000011011110110010101110011001000000111010001101111001000000111010101101110011011010110000101110011011010110010000001110100011010000110010100100000011101000110100001110101011011100110010001100101011100100010000001100111011011110110010000101110001000000100111101101110011000110110010100100000011010000110100101110011001000000111010001110010011101010110010100100000011011100110000101101101011001010010000001101001011100110010000001101011011011100110111101110111011011100010110000100000011100000110111101110101011100100010000001101111011101010111010000100000011101000110100001100101001000000110010001110010011010010110111001101011001000000110111101100110001000000111010001101000011001010010000001101001011011010110110101101111011100100111010001100001011011000111001100101110"
 
   - id: 11
     name: "Round 11 — Campus Riddle 1"
@@ -174,8 +184,8 @@ rounds:
       Where am I?
     points: 100
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     limit_solves: true
     max_solves: 3
     flag_hash: "de3d67fc56a893697cc8c55913c5729d43d7734ba52415d09959c81a342b52c6"
@@ -194,8 +204,8 @@ rounds:
       Where am I?
     points: 100
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     limit_solves: true
     max_solves: 3
     flag_hash: "c82fe4299004bde87ad7ae402b023be9d0a6c3f4f97ca4bc25eaccec5ae104fc"
@@ -218,8 +228,8 @@ rounds:
       Where am I?
     points: 100
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     limit_solves: true
     max_solves: 3
     flag_hash: "ff67d198dd1bedfba0257882b8724125dae5ce3fd115aa5bbb503786bea5c649"
@@ -240,8 +250,8 @@ rounds:
       Where am I?
     points: 100
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     limit_solves: true
     max_solves: 3
     flag_hash: "98c42fed97184d396473919e0ad43339f4ebc81c9f302213ad29d16f5616c721"
@@ -262,8 +272,8 @@ rounds:
       Where am I?
     points: 100
     is_active: true
-    allow_hints: false
-    allow_skips: false
+    allow_hints: true
+    allow_skips: true
     limit_solves: true
     max_solves: 3
     flag_hash: "7598aa658e06596a3b6f8ace3f79244b0c535d017c8d2b74d6ac1424fe6903e7"
@@ -284,9 +294,47 @@ rounds:
       Where am I?
     points: 100
     is_active: true
+    allow_hints: true
+    allow_skips: true
+    limit_solves: true
+    max_solves: 3
+    flag_hash: "4177e23d823eb761465a58d3a9c2f3e523b1c8d43899b659e6aa1c2c21b39597 "
+    hints: []
+  - id: 17
+    name: "Round 17 — The unknown location"
+    description: ""
+    points: 200
+    is_active: true
+    allow_hints: true
+    allow_skips: true
+    flag_hash: "b79feeee8930c590aaff0532b629d36608c105e2a0eeb597a8394fc3f79d191a"
+    skip_text: "Proceed to Round 18 - r/waiters"
+    hints:
+      - type: plain
+        text: "I spend hours reading threads in this one sub after my shift. Everyone there is always 'in the weeds', venting about getting 'stiffed' on a check, or asking how to get 'campers' to leave Table 4. The community name is just the 7-letter plural noun for our job title—the ones taking the orders, not cooking the food."
+      - type: encoded
+        text: "5365656b2074686520756e64657267726f756e6420676174686572696e67206f662074686520706c61746520626561726572732e20536576656e206c657474657273206e616d652074686f73652077686f2074616b6520796f75722064656d616e647320627574206e6576657220746f756368207468652073746f76652e"
+  - id: 18
+    name: "Round 18 — a message"
+    description: ""
+    points: 300
+    is_active: true
+    allow_hints: true
+    allow_skips: false
+    flag_hash: "4e5b698195c70c0342c30a26fa89b62ef11a44237b33498aaad6679379e9d899"
+    hints:
+      - type: plain
+        text: "The thread has a message somewhere in it, but it's not in plain sight. find it "
+      - type: encoded
+        text: "124150145040154157165144145163164040166157151143145163040142165162171040164150145040164162165164150056040123145141162143150040164150145040165156163145145156056"
+  - id: 19
+    name: "Round 19 — the winner"
+    description: ""
+    points: 700
+    is_active: true
     allow_hints: false
     allow_skips: false
     limit_solves: true
     max_solves: 3
-    flag_hash: "4177e23d823eb761465a58d3a9c2f3e523b1c8d43899b659e6aa1c2c21b39597 "
+    flag_hash: "1092215aa18b22427d22330312ad055e5bc0398a95d797cab560e24fd4aabf7b"
     hints: []

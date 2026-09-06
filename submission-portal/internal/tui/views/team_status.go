@@ -176,6 +176,11 @@ func (m *TeamStatusModel) buildReport() string {
 		if r.Description != "" {
 			line += fmt.Sprintf("\n    ↳ %s", lipgloss.NewStyle().Foreground(lipgloss.Color("#8B949E")).Render(r.Description))
 		}
+		if skippedSet[r.ID] {
+			if skipText := m.svc.Rounds.SkipText(r.ID); skipText != "" {
+				line += fmt.Sprintf("\n    ↳ %s", lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF9D")).Render("Next Target: "+skipText))
+			}
+		}
 		matrixBuilder.WriteString(line + "\n")
 	}
 

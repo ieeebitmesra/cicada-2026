@@ -478,6 +478,9 @@ func (m SkipRoundModel) View() string {
 			summaryText += fmt.Sprintf("Details: %s\n", m.selected.Description)
 		}
 		summaryText += fmt.Sprintf("Penalty Incurred: −%s Points (50%% of challenge value)\nStatus: PERMANENTLY FORFEITED & LOCKED\nProof: Password-confirmed authorization.", formatPoints(m.cost))
+		if skipText := m.svc.Rounds.SkipText(m.selected.ID); skipText != "" {
+			summaryText += fmt.Sprintf("\n\nNext Objective / URL: %s", skipText)
+		}
 
 		summary := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).

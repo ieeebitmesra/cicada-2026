@@ -24,6 +24,7 @@ type Round struct {
 	ID          int
 	Name        string
 	Description string
+	SkipText    string
 	Points      int
 	FlagHash    string // SHA-256 hex of the exact flag
 	IsActive    bool
@@ -83,6 +84,8 @@ type RoundDef struct {
 	Name               string    `yaml:"name"`
 	Description        string    `yaml:"description,omitempty"`
 	Text               string    `yaml:"text,omitempty"`
+	SkipText           string    `yaml:"skip_text,omitempty"`
+	SkipURL            string    `yaml:"skip_url,omitempty"`
 	Points             int       `yaml:"points"`
 	IsActive           bool      `yaml:"is_active"`
 	FlagHash           string    `yaml:"flag_hash"`
@@ -104,6 +107,17 @@ func (rd *RoundDef) GetDescription() string {
 		return rd.Description
 	}
 	return rd.Text
+}
+
+// GetSkipText returns the round's skip_text or skip_url if configured.
+func (rd *RoundDef) GetSkipText() string {
+	if rd == nil {
+		return ""
+	}
+	if rd.SkipText != "" {
+		return rd.SkipText
+	}
+	return rd.SkipURL
 }
 
 // IsSolveLimited returns whether the round has a cap on successful solves.
@@ -257,6 +271,17 @@ func (rc *RoundsConfig) Def(id int) *RoundDef {
 		return nil
 	}
 	return rc.byID[id]
+}
+
+// SkipText returns the configured skip_text or skip_url for a round.
+func (rc *RoundsConfig) SkipText(roundID int) string {
+	if rc == nil {
+		return ""
+	}
+	if d := rc.Def(roundID); d != nil {
+		return d.GetSkipText()
+	}
+	return ""
 }
 
 // Hint returns the hint text for (round, type, index) if it exists.

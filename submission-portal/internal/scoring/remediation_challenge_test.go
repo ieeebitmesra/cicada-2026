@@ -39,46 +39,21 @@ func setupRemediationDB(t *testing.T) (*store.DB, string) {
 		t.Fatalf("mkdir migrations: %v", err)
 	}
 
-	// Read existing 001_initial.sql
-	initSQL, err := os.ReadFile("../../migrations/001_initial.sql")
+	// Copy all migrations from ../../migrations
+	entries, err := os.ReadDir("../../migrations")
 	if err != nil {
-		t.Fatalf("read 001_initial.sql: %v", err)
+		t.Fatalf("read migrations: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(migDir, "001_initial.sql"), initSQL, 0o644); err != nil {
-		t.Fatalf("write 001_initial.sql: %v", err)
-	}
-
-	// Write proposed 002_security_hardening.sql
-	hardeningSQL := `-- migrations/002_security_hardening.sql — Security and Concurrency Hardening
-
--- 1. Enforce unique hint redemption per team, round, type, and index (SEC-04)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_hint_usage_unique
-    ON hint_usage(team_id, round_id, hint_type, hint_index);
-
--- 2. Enforce uniqueness of PGP cryptographic proofs to prevent token replay
-CREATE UNIQUE INDEX IF NOT EXISTS idx_hint_usage_proof
-    ON hint_usage(pgp_proof);
-
--- 3. Update scoreboard view with deterministic tie-breaking by earliest solve timestamp (SEC-14)
-DROP VIEW IF EXISTS scoreboard;
-CREATE VIEW scoreboard AS
-SELECT
-    t.id   AS team_id,
-    t.name AS team_name,
-    COALESCE(SUM(CASE WHEN s.is_correct THEN r.points ELSE 0 END), 0)
-      - COALESCE((SELECT SUM(cost_points) FROM hint_usage WHERE team_id = t.id), 0)
-      - COALESCE((SELECT SUM(cost_points) FROM skips      WHERE team_id = t.id), 0)
-      AS total_score,
-    COUNT(DISTINCT CASE WHEN s.is_correct THEN s.round_id END) AS rounds_solved,
-    COALESCE(MAX(CASE WHEN s.is_correct THEN s.submitted_at END), t.created_at) AS last_solve_at
-FROM teams t
-LEFT JOIN submissions s ON s.team_id = t.id
-LEFT JOIN rounds r      ON r.id = s.round_id
-GROUP BY t.id
-ORDER BY total_score DESC, last_solve_at ASC, team_name ASC;
-`
-	if err := os.WriteFile(filepath.Join(migDir, "002_security_hardening.sql"), []byte(hardeningSQL), 0o644); err != nil {
-		t.Fatalf("write 002_security_hardening.sql: %v", err)
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".sql") {
+			content, err := os.ReadFile(filepath.Join("../../migrations", e.Name()))
+			if err != nil {
+				t.Fatalf("read %s: %v", e.Name(), err)
+			}
+			if err := os.WriteFile(filepath.Join(migDir, e.Name()), content, 0o644); err != nil {
+				t.Fatalf("write %s: %v", e.Name(), err)
+			}
+		}
 	}
 
 	// Run migration
