@@ -17,8 +17,17 @@ challenge-ssh/rootfs/*.ext4
 challenge-ssh/rootfs/overlay/home/seeker/challenge.zip
 challenge-ssh/rootfs/overlay/home/seeker/track.mid
 
-# Backups
+# Backups & Data Sheets
 backup.sql
-scores.csv
-teams.csv
+*.csv
+*.tsv
+*.xlsx
+
+# Environment & secrets
+.env
+.env.*
+*.token
+*.secret
+*.key
+
 .agents/
