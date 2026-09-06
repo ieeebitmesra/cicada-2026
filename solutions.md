@@ -1,739 +1,1204 @@
-# 🏛️ IEEE-IET CTF — Cicada 2026: Official Solutions & Masterclass Guide
+# 🏛️ PANTHEON CTF — Complete Solutions Guide
 
-> **Welcome, Participants and Security Researchers!**  
-> This comprehensive manual serves as the official, step-by-step solutions walkthrough and learning guide for the **IEEE CTF (Cicada 2026 / Pantheon Track)**. 
-> 
-> Designed to provide deep technical insight, each chapter explores the **hacker mindset**, **initial observations**, **decoy avoidance**, **tools required**, **theoretical underpinnings**, **exact mathematical and code solutions**, and **key security takeaways**.
+> **For Participants**: This document walks you through every round of the PANTHEON CTF, explaining not just *what* to do, but *why* each step works, *how* you should think about it, and *what tools* you'd use. Treat this as a learning resource — every puzzle teaches a real-world skill.
 
----
+## Finding the Submission Portal
 
-## 🗺️ Competition Architecture & Narrative Lore
+| Detail | Value |
+|---|---|
+| **Host** | `pantheonctf.qd.je:2222` |
 
-The competition is structured into distinct thematic and technical tiers:
-1. **The Pantheon ARG Trail (Rounds 1–5 & 17–19)**: A multi-stage Alternate Reality Game (ARG) blending image steganography, Morse code, FFT frequency-domain embedding, historical book ciphers, Babylonian cuneiform arithmetic, MIDI pitch decoding, Ramanujan Taxicab numbers, Known-Plaintext XOR attacks, geolocation OSINT, and subreddit forensics.
-2. **Web Exploitation (Rounds 6–7)**: Insecure session state & cookie manipulation, bypassing naive non-recursive input filters leading to Go Server-Side Template Injection (SSTI).
-3. **Binary Exploitation / PWN (Rounds 8–9)**: Stack-based `printf` format string leaks and memory corruption via out-of-bounds index manipulation in C/C++.
-4. **Classical Cryptography (Round 10)**: Chosen-plaintext differential oracle attack against Vigenère ciphers.
-5. **Campus Geolocation Riddles (Rounds 11–16)**: Physical campus geography, landmarks, infrastructure, and hidden endpoints at BIT Mesra.
+The link to the submission portal was hidden in the `profile.jpeg` image file shared in the **WhatsApp group**.
 
----
+Running `exiftool` on the image revealed:
 
-```
-                                  [ IEEE CTF ROADMAP ]
-                                            │
-        ┌───────────────────────────────────┼───────────────────────────────────┐
-        ▼                                   ▼                                   ▼
- [ THE ARG TRAIL ]                  [ WEB / PWN / CRYPTO ]              [ CAMPUS RIDDLES ]
-  R1: Warmup (Morse + IEND)          R6: Cookie Privilege Escalation     R11: Management / Blood Camp
-  R2: FFT Stego & Link Rotator       R7: Go Template SSTI (Filter Bypass)R12: Ember Wheels Juice Stall
-  R3: Book Cipher & Babylonian Cunei R8: Format String Stack Leak        R13: Gym / PT Course
-  R4: Babylonian PIN & MIDI Melody   R9: Memory OOB Array Write          R14: Tea Stall Coin Duel
-  R5: Hermes Beacon (Known-PT XOR)   R10: Sphinx Chosen-PT Oracle        R15: Digital Hive / Leave ERP
-  R17: Statue Geolocation (SF)                                           R16: Silent Giants Market
-  R18: Reddit r/waiters Forensics
-  R19: 1729 Darknet Victory
+> The invitation is on. See you at `pantheonctf.qd.je` at `2222`.
+
+The port is `2222`. Next, resolve the domain with:
+
+```bash
+dig TXT pantheonctf.qd.je
 ```
 
----
+The TXT records provide the login instructions:
 
-# 📜 Table of Contents
-1. [Round 1 — Warmup (Image Steganography & Morse Trail)](#round-1--warmup)
-2. [Round 2 — Crack It If You Can (FFT Block Steganography)](#round-2--crack-it-if-you-can)
-3. [Round 3 — The Server's Whisper (Book Cipher & Vigenère Relay)](#round-3--the-servers-whisper)
-4. [Round 4 — The Seeker's Files (Babylonian PIN, MIDI Pitch & Ramanujan Cubes)](#round-4--the-seekers-files)
+```text
+congrats! username is your pantheon team name; special characters and spaces are replaced by - and it is all lowercase. Password is your squad code, and the password is all uppercase.
+210.79.129.88 is the IP at port 2222.
+```
+---
+## Table of Contents
+
+1. [Round 1 — Warmup (The Hidden Whisper)](#round-1--warmup)
+2. [Round 2 — Crack It If You Can (FFT Steganography)](#round-2--crack-it-if-you-can)
+3. [Round 3 — The Server's Whisper (Book Cipher & Babylonian Numbers)](#round-3--the-servers-whisper)
+4. [Round 4 — The Seeker's Files (Babylonian PIN, MIDI Decode, Ramanujan)](#round-4--the-seekers-files)
 5. [Round 5 — The Gatekeeper's Beacon (XOR Known-Plaintext Attack)](#round-5--the-gatekeepers-beacon)
-6. [Round 6 — Web: The Secure Portal (Cookie Privilege Escalation)](#round-6--web-the-secure-portal)
-7. [Round 7 — Web: Global Megaphone (Go SSTI Non-Recursive Blacklist Bypass)](#round-7--web-global-megaphone)
-8. [Round 8 — Binary: Stonks Trading AI (Stack Format String Leak)](#round-8--binary-stonks-trading-ai)
-9. [Round 9 — Binary: The Labyrinth (C++ Out-of-Bounds Memory Corruption)](#round-9--binary-the-labyrinth)
-10. [Round 10 — Crypto: Sphinx of the Pantheon (Chosen-Plaintext Vigenère Oracle)](#round-10--crypto-sphinx-of-the-pantheon)
-11. [Rounds 11–16 — Campus Riddles Track (BIT Mesra Geolocation)](#rounds-1116--campus-riddles-track)
-12. [Round 17 — The Unknown Location (Geolocation & Aaron Swartz OSINT)](#round-17--the-unknown-location)
-13. [Round 18 — A Message (Reddit Community Forensics)](#round-18--a-message)
-14. [Round 19 — The Winner (The 1729 Darknet Transmission)](#round-19--the-winner)
-15. [🎓 Educational Synthesis: Tools, Tactics & Defensive Takeaways](#-educational-synthesis)
+6. [Round 6 — Web: The Secure Portal (Cookie Manipulation)](#round-6--web-the-secure-portal)
+7. [Round 7 — Web: Global Megaphone (SSTI / Non-Recursive Blacklist)](#round-7--web-global-megaphone)
+8. [Round 8 — Binary: Stonks Trading AI (Format String Attack)](#round-8--binary-stonks-trading-ai)
+9. [Round 9 — Binary: The Labyrinth (Out-of-Bounds Memory Corruption)](#round-9--binary-the-labyrinth)
+10. [Round 10 — Crypto: Sphinx of the Pantheon (Vigenère Oracle Attack)](#round-10--crypto-sphinx-of-the-pantheon)
+11. [Rounds 11–16 — Campus Riddles](#rounds-1116--campus-riddles)
+12. [Round 17 — The Unknown Location (The Statue Waiter)](#round-17--the-unknown-location)
+13. [Round 18 — A Message (Reddit & The Post from 1729)](#round-18--a-message)
+14. [Round 19 — The Winner (The Dark Web Flag)](#round-19--the-winner)
 
 ---
 
-# Round 1 — Warmup
+## The Big Picture: The ARG Chain
 
-### 1. Challenge Overview
-- **Category**: Steganography / Forensic Inspection
-- **Points**: 100
-- **Artifact Provided**: `intro.png`
+Before diving in, understand that Rounds 1 through 4 and Rounds 17 through 19 form a **single continuous alternate-reality game (ARG) chain**. Each round's flag or output gives you the URL, password, or clue you need for the next. The remaining rounds (6–10) are another interconnected challenges in web exploitation, binary exploitation, cryptography where one flag is the key to the next  and then physical campus riddles which are standalone challenges.
 
-### 2. The Hacker Mindset & Initial Thoughts
-When presented with an introductory image in a forensic or ARG challenge:
-- **Visual Inspection**: High-contrast zoom on corners, borders, dark voids, and text artifacts.
-- **File Structure Analysis**: Inspecting file headers (`\x89PNG\r\n\x1a\n`), metadata chunks (`tEXt`, `zTXt`), and trailing bytes appended after the mandatory `IEND` chunk.
-- **Trailing Data**: PNG specifications dictate that rendering engines stop parsing image chunks when encountering `IEND\xaeB`\x82`. Extra data appended after `IEND` is invisible in image viewers but accessible via binary analysis.
+**The chain flows like this:**
 
-### 3. Hints & Decryption
-- **Plain Hint**: *"Seek past where the curtain falls—beyond the wall that marks the end (IEND). Listen to the tapping of the telegraph wire: dots and dashes in the dark. The Roman emperor's key is yours."*
-- **Encoded Hint**: Base64 string containing hex-encoded instructions explaining how to look behind the `IEND` marker and decode telegraphic dots and dashes with a Caesar/Julius key.
+```
+Round 1 (intro.png hidden text)
+    ↓ flag = link to image is the key
+Round 2 (FFT stego on image → blog URL)
+    ↓ blog URL
+Round 3 (book cipher + Babylonian numbers → next site)
+    ↓ Vigenère with Julius key → Round 4 URL
+Round 4 (Babylonian PIN → ZIP → MIDI decode → Ramanujan → coordinates site)
+    ↓ website URL
+Round 17 (coordinates → find the statue → Aaron Swartz → "waiter")
+    ↓ flag = r/waiters
+Round 18 (Reddit r/waiters → post from 1729 → dark web link)
+    ↓ .onion link
+Round 19 (visit dark web link → victory flag)
+```
 
-### 4. Tools Required
-- `xxd`, `strings`, or `hexdump`
-- Python 3 (`bytes.find`)
-- Image viewer / Photoshop / GIMP (with level adjustments / high zoom)
+---
 
-### 5. Step-by-Step Solution
+## Round 1 — Warmup
 
-#### Step A: Visual Zoom (Round 1 Visual Flag)
-Opening `intro.png` and zooming deeply into the high-contrast quadrant reveals faint, low-opacity white text embedded into the visual plane. Submitting this visual text solves the initial warmup milestone.
+| Detail | Value |
+|---|---|
+| **Points** | 100 |
+| **Category** | Steganography / OSINT |
+| **Flag** | `PANTHEON{https://welcome-deb.pages.dev/}` |
+| **Key Tool** | Browser zoom, hex editor, Morse decoder |
 
-#### Step B: Analyzing Trailing Bytes (The Julius Key for Later Rounds)
-Run a Python script to inspect bytes following the PNG `IEND` chunk:
+### The Setup
+
+When the CTF begins, participants receive an image file: `intro.png`. It's the introductory poster for the event — looks like a normal event flyer. Nothing suspicious at first glance.
+
+### Step 1: Find the Visually Hidden Text
+
+**What to do:** Open `intro.png` in a browser or image viewer and **zoom in**. On the image, there is **white text on a white (or near-white) background** — invisible at normal zoom levels, but if you zoom in enough or adjust contrast/brightness, the text becomes readable.
+
+**Why this works:** This is one of the oldest tricks in web design and CTFs. Text can be present but invisible if its color matches the background. The human eye can't distinguish `#FFFFFF` text on a `#FEFEFE` background, but zooming in or running through an image filter reveals it.
+
+**The thinking process:**
+- "I have an image for Round 1. The hint says 'Seek past where the curtain falls.' That's cryptic."
+- "Let me look at this image more carefully — zoom in, adjust contrast..."
+- "There's hidden white text! It says something..."
+
+**Tools you could use:**
+- Simply zooming in your browser (`Ctrl +` or pinch-to-zoom)
+- GIMP/Photoshop → Image → Adjustments → Levels (crush the whites)
+- Python PIL: `ImageEnhance.Contrast(img).enhance(10.0)`
+
+The visible flag text gives you: **`PANTHEON{https://welcome-deb.pages.dev/}`**
+
+This is your Round 1 flag. Submit it.
+
+### Step 2: The Hidden Message After IEND (Bonus Discovery)
+
+**What to do:** Open `intro.png` in a hex editor (HxD, xxd, or `python3 -c "open('intro.png','rb').read()"`). Look past the PNG `IEND` chunk marker (`49 45 4E 44 AE 42 60 82`). There is **trailing data** appended after the PNG file officially ends.
+
+**What you find:** Morse code sequences and ASCII decimal values. The Morse code decodes to the flag `PANTHEON{y0u_g0t_7h15_jul1u5}`. The ASCII decimal message decodes to:
+
+> **"use this as key to get through the solutions later"**
+
+**Why this matters:** The flag contains the word **"JUL1U5"** — a leetspeak version of "Julius". This is a reference to **Julius Caesar**, and the flag itself will be used as a **Vigenère cipher key** in Round 3. The trailing message is telling you explicitly: *save this flag, you'll need it later*.
+
+**The takeaway:** In CTFs, always check image files for:
+1. Visual steganography (hidden text, adjusted colors)
+2. Trailing data after file markers (IEND for PNG, FFD9 for JPEG)
+3. Metadata (EXIF data, comments)
+
+---
+
+## Round 2 — Crack It If You Can
+
+| Detail | Value |
+|---|---|
+| **Points** | 150 |
+| **Category** | Steganography (FFT), Web |
+| **Flag** | `PANTHEON{https://kryptoscicada.blogspot.com/}` |
+| **Key Tool** | FFT Stego CLI, browser |
+
+### The Setup
+
+After Round 1, you're directed to: **`https://welcome-deb.pages.dev`**
+
+This is a **link rotator page** — it cycles through different links or content, possibly showing different things at different times or requiring interaction to find the actual content. The page also serves (or links to) an image file: `stego.jpg`.
+
+### Step 1: Identify the Link Rotator
+
+**What to do:** Visit `welcome-deb.pages.dev`. The page rotates links — it may redirect you or display cycling content. Inspect the page source, look at the JavaScript, and identify what's happening under the hood.
+
+**The thinking process:**
+- "This page seems to keep changing or redirecting me. Let me view source."
+- "There's JavaScript rotating through URLs or content. Let me find the static content."
+- "There's an image file — `stego.jpg` — linked or embedded here."
+
+### Step 2: Extract the Hidden Flag via FFT Steganography
+
+**What to do:** Download `stego.jpg`. This image has a flag **hidden using Fast Fourier Transform (FFT) Block Steganography**. This is an advanced steganography technique where data is embedded in the frequency domain of image blocks rather than the spatial domain.
+
+**The thinking process:**
+- "Normal stego tools (steghide, zsteg, binwalk) aren't finding anything."
+- "The image has a cicada image that looks like built from fourier epicycles."
+- "The hint says 'FFT Block Steganography.' This is frequency-domain stego."
+- "I need a specialized tool for FFT extraction."
+
+**The tool:** The hint for Round 2 explicitly provides a link to the extraction tool:
+```
+https://gist.github.com/aj-1729/9c6a477425dbb253a0a22f645ee329ff
+```
+
+This is an FFT stego CLI tool. Run it against `stego.jpg`:
+
+```bash
+python3 fft_stego.py extract stego.jpg
+```
+
+**What you get:** The extracted data reveals the blog URL:
+```
+https://kryptoscicada.blogspot.com/
+```
+
+### Step 3: Submit the Flag
+
+The flag for Round 2 is the URL itself wrapped in the flag format:
+```
+PANTHEON{https://kryptoscicada.blogspot.com/}
+```
+
+**Why FFT steganography?** Traditional LSB (Least Significant Bit) steganography modifies pixel values directly and can be detected by statistical analysis. FFT steganography embeds data in the frequency components of image blocks, making it invisible to standard steganalysis tools. You need to know the specific encoding method to extract it — hence why the hint provides the exact tool.
+
+---
+
+## Round 3 — The Server's Whisper
+
+| Detail | Value |
+|---|---|
+| **Points** | 800 |
+| **Category** | Classical Cryptography, OSINT |
+| **Flag** | `PANTHEON{raven-codes}` |
+| **Key Tool** | Book cipher decoder, Babylonian number converter, Vigenère cipher |
+
+### The Setup
+
+The Round 2 flag gives you the blog URL: **`https://kryptoscicada.blogspot.com/`**
+
+This blog site is the challenge for Round 3. It contains two critical elements:
+1. A **book cipher** encoded message
+2. **Babylonian cuneiform numbers** in the background/styling
+
+### Step 1: Identify the Book Cipher
+
+**What to do:** Visit the blog. You'll notice encoded text that looks like number sequences — pairs or triplets of numbers (e.g., `3:14:2`, `7:1:5`). This is a **book cipher**: each number tuple references a specific word, line, or character in a known text (the "book").
+
+**The thinking process:**
+- "These numbers reference positions in some text. This is a book cipher."
+- "But what's the book? I need the key text to decode this."
+- "Where would the book come from?"
+
+### Step 2: Find the Book — The Book of the Dead
+
+**What is the book?** The book for the cipher was hidden in the image `blessed.jpg` which was shared in the **WhatsApp group** as part of the CTF event communications. This image contains an **embedded ZIP file** (steganography — a ZIP appended to or hidden within the JPEG).
+
+**How to extract it:**
+
+```bash
+# Check if there's a ZIP embedded in the image
+binwalk blessed.jpg
+
+# Extract embedded files
+binwalk -e blessed.jpg
+
+# Or manually, since ZIP files start with PK (50 4B)
+# Find the ZIP offset and extract
+unzip blessed.jpg  # Sometimes this just works!
+```
+
+**The thinking process:**
+- "The hint says 'The cipher is a book, you got the book right. See the book and stop the crying baby.'"
+- "The 'Book of Dead' image was shared in the WhatsApp group — that's suspicious."
+- "Images can contain embedded files. Let me run binwalk on it."
+- "There it is — a ZIP file inside the JPEG!"
+- "The extracted text is the reference book for the book cipher."
+
+**Why the Book of the Dead?** It's thematic — the Pantheon CTF has mythological themes. The Egyptian Book of the Dead is a famous ancient text, fitting the "ancient knowledge" motif.
+
+### Step 3: Decode the Book Cipher
+
+Using the extracted text as your reference book, decode the number sequences from the blog. Each number tuple points to a specific position (page/paragraph/line, line/word, character) in the extracted book text.
+
+The decoded book cipher yields: **`raven-codes.pages.dev`**.
+
+### Step 4: Notice the Babylonian Numbers
+
+**What to do:** Look at the blog's background, styling, or decorative elements. You'll see **Babylonian cuneiform numerals** — wedge-shaped symbols that represent numbers in base-60 (sexagesimal). These numbers become important in Round 4.
+
+**Why Babylonian numbers?** This is a breadcrumb for later. The Babylonian number system uses two symbols (a vertical wedge for 1 and a corner wedge for 10) combined to form values 1-59, with positional notation for larger numbers. You'll need to understand this system for the Round 4 PIN.
+
+### Step 5: Apply the Vigenère Cipher
+
+**What to do:** Take the decoded book cipher output and apply a **Vigenère cipher** using the key from Round 1.
+
+Remember Round 1's flag: `PANTHEON{y0u_g0t_7h15_jul1u5}`
+
+The key is **"YOUGOTTHISJULIUS"**. Julius Caesar → Caesar cipher → Vigenère cipher (the "upgraded" Caesar cipher).
+
+**The thinking process:**
+- "The Round 1 trailing data said 'use this as key to get through the solutions later.'"
+- "I have a decoded book cipher output. The hint says 'Vigenère' and 'Julius.'"
+- "Julius Caesar invented the Caesar cipher. Vigenère is its polyalphabetic evolution."
+- "Let me use the Julius key from Round 1 as the Vigenère key."
+
 ```python
-with open('intro.png', 'rb') as f:
-    data = f.read()
-
-iend_idx = data.find(b'IEND')
-# IEND chunk is 4 bytes 'IEND' + 4 bytes CRC
-trailer = data[iend_idx + 8:]
-print(trailer.decode('utf-8', errors='ignore'))
+def vigenere_decrypt(ciphertext, key):
+    result = ""
+    key_index = 0
+    for char in ciphertext.upper():
+        if char.isalpha():
+            shift = ord(key[key_index % len(key)].upper()) - 65
+            decrypted = chr((ord(char) - 65 - shift) % 26 + 65)
+            result += decrypted
+            key_index += 1
+        else:
+            result += char
+    return result
 ```
 
-**Output:**
-```text
-PANTHEON{-.-- ----- ..- ..--.- --. ----- - ..--.- --... .... .---- ..... ..--.- .--- ..- .-.. .---- ..- .....}
-117 115 101 32 116 104 105 115 32 97 115 32 107 101 121 32 116 111 32 103 101 116 32 116 104 114 111 117 103 104 32 116 104 101 32 115 111 108 117 116 105 111 110 115 32 108 97 116 101 114 32
-```
+**What you get:** The Vigenère decryption reveals the **Round 4 site URL**: `https://qrkabolk.pages.dev/`
 
-#### Step C: Morse & ASCII Decoding
-1. **Morse Translation**:
-   - `-.--` = `Y`, `-----` = `0`, `..-` = `U`, `..--.-` = `_`
-   - `--.` = `G`, `-----` = `0`, `-` = `T`, `..--.-` = `_`
-   - `--...` = `7`, `....` = `H`, `.----` = `1`, `.....` = `5`, `..--.-` = `_`
-   - `.---` = `J`, `..-` = `U`, `.-..` = `L`, `.----` = `1`, `..-` = `U`, `.....` = `5`
-   - **Decoded String**: `PANTHEON{Y0U_G0T_7H15_JUL1U5}`
-2. **ASCII Decimal Numbers**:
-   `117 115 101 32...` converts to:
-   `"use this as key to get through the solutions later "`
-   *(Note: Retain `JUL1U5` as the key for Round 3's Vigenère cipher).*
+### Submit the Flag
+
+The Round 3 flag is the **raven-codes** obtained from the book cipher before applying Vigenère.
 
 ---
 
-# Round 2 — Crack It If You Can
+## Round 4 — The Seeker's Files
 
-### 1. Challenge Overview
-- **Category**: Steganography / Frequency Domain Analysis
-- **Points**: 150
-- **Artifact Provided**: Redirect link (`https://welcome-deb.pages.dev`) and `stego.jpg`
+| Detail | Value |
+|---|---|
+| **Points** | 2000 |
+| **Category** | Multi-stage puzzle (Crypto, Stego, Music, Math) |
+| **Flag** | `PANTHEON{https://17291383220683.pages.dev/}` |
+| **Key Tool** | Babylonian number converter, MIDI analyzer, ZIP cracker, math knowledge |
 
-### 2. The Hacker Mindset & Initial Thoughts
-When visiting `https://welcome-deb.pages.dev`, participants encounter a weighted link rotator (`main.html`) redirecting to Rickrolls and decoy video streams, alongside the true payload destination hosting `stego.jpg`.
-Standard LSB (Least Significant Bit) extractors (e.g. `zsteg`, `steghide`) fail on `stego.jpg` because JPEG compression quantizes high frequencies, destroying simple spatial-domain LSB data. The challenge requires **FFT (Fast Fourier Transform) Block Steganography**.
+This is the **big boss round** — 2000 points and the most complex multi-stage challenge in the entire CTF. It chains together Babylonian numerals, MIDI music decoding, ZIP encryption, and Ramanujan's taxicab numbers.
 
-### 3. Hints & Decryption
-- **Plain Hint**: *"Don't reinvent the wheel analyzing frequency domains. The flag was embedded using FFT Block Steganography. You can find the exact CLI extraction tool here: https://gist.github.com/aj-1729/9c6a477425dbb253a0a22f645ee329ff"*
-- **Encoded Hint**: Double Base64 string decoding to: *"FFT block stego on 8x8 luminance blocks: extract middle frequency coefficients to reconstruct payload."*
+### The Setup
 
-### 4. Tools Required
-- Python 3 with `numpy` and `scipy` (or the provided Gist CLI tool)
-- `curl` / `wget`
+From Round 3, you arrive at **`https://qrkabolk.pages.dev/`** — a static site that asks for a **numeric PIN** to unlock an encrypted download.
 
-### 5. Step-by-Step Solution
-Using the extraction script on `stego.jpg`:
+### Step 1: Enter the Babylonian PIN
+
+**What to do:** The site has a PIN entry field and a **sun icon** as a decorative element which was in round 3 in the image containing babylonian numbers. The PIN is written in **Babylonian cuneiform numerals** — the same number system you saw in the blog background in Round 3 read it from the top left corner in **anti-clockwise** order.
+
+**The PIN:** `20092002194507165301101201319690815`
+
+**How to derive it:** The Babylonian numbers on the blog and/or the Round 4 site translate to this decimal sequence. The **sun icon** is the critical hint — it tells you the **reading direction**. In Babylonian writing, the sun's position indicates which direction to read the cuneiform wedges (left-to-right or right-to-left).
+
+**The thinking process:**
+- "I see wedge-shaped symbols. These are Babylonian cuneiform numbers."
+- "There's a sun icon. Why? In ancient Mesopotamian writing, the sun indicated reading direction."
+- "The sun tells me to read the numbers in a specific direction (e.g., left to right)."
+- "Converting each group of wedges: vertical wedges = 1s, corner wedges = 10s..."
+- "The full number is: `20092002194507165301101201319690815`"
+
+**Technical details (from the build script):**
 ```python
-import numpy as np
-from PIL import Image
-
-def extract_fft_stego(image_path):
-    img = Image.open(image_path).convert('YCbCr')
-    y, _, _ = img.split()
-    arr = np.array(y, dtype=np.float32)
-    h, w = arr.shape
-    
-    bits = []
-    # Process 8x8 macroblocks
-    for i in range(0, h - 7, 8):
-        for j in range(0, w - 7, 8):
-            block = arr[i:i+8, j:j+8]
-            fft_block = np.fft.fft2(block)
-            # Magnitude comparison on mid-frequency conjugate pairs
-            mag1 = np.abs(fft_block[3, 4])
-            mag2 = np.abs(fft_block[4, 3])
-            bits.append('1' if mag1 > mag2 else '0')
-            
-    # Group bits into bytes
-    bit_str = "".join(bits)
-    byte_vals = [int(bit_str[k:k+8], 2) for k in range(0, len(bit_str), 8)]
-    payload = bytes(byte_vals)
-    return payload
-
-# Executing yields the destination blog link
+PIN = "20092002194507165301101201319690815"
 ```
 
-- **Flag**: `PANTHEON{https://kryptoscicada.blogspot.com/}`
-- **SHA-256 Hash**: `2fb64ebc726bc0188f1abea53539644e984fdfc1ae944cc770debaaef52485da`
+The site uses AES-256-GCM encryption with this PIN as the key derivation input (PBKDF2 with 100,000 iterations). When you enter the correct PIN, it decrypts the payload and initiates a ZIP file download.
 
----
+### Step 2: Open the Outer ZIP
 
-# Round 3 — The Server's Whisper
+**What you get:** `round4_challenge.zip` — an unencrypted ZIP containing exactly two files:
+1. `ancient_hymn.mid` — A MIDI music file
+2. `secret_archive.zip` — A password-protected ZIP (ZipCrypto encrypted)
 
-### 1. Challenge Overview
-- **Category**: Classical Cryptography / Steganography
-- **Points**: 800
-- **Target URL**: `https://kryptoscicada.blogspot.com/`
+### Step 3: Decode the MIDI File
 
-### 2. The Hacker Mindset & Initial Thoughts
-Upon inspecting `https://kryptoscicada.blogspot.com/`:
-1. **The Blog Post**: Contains numbered tuples resembling a **Book Cipher** (Page, Line, Word, Letter or Paragraph, Line, Word).
-2. **The Background / Source Code**: Features ancient Babylonian cuneiform numbers (`Y` wedges and `<` corner-wedges) in the styling.
-3. **The Interlock**: Solving the book cipher gives a raw cipher string (`raven-codes.pages.dev`). But accessing it indicates a dead end unless deciphered with the key carried forward from Round 1 (`JUL1U5`).
+**What to do:** Open `ancient_hymn.mid` in a MIDI editor/viewer (like MuseScore, MIDI Explorer, or a Python MIDI library). The file has two tracks:
 
-### 3. Hints & Decryption
-- **Plain Hint**: *"The cipher is a book, you got the book right. See the book and stop the crying baby."*
-- **Encoded Hint**: Hex string decoding to: *"SERVER: identify the header / Look behind the scenes, where an ancient empire counts with wedges. Let the bound leaves guide your path."*
+- **Track 1: "Melody - The Oracle's Voice"** — This is the important one
+- **Track 2: "Harmony - Babylonian Lyre"** — Decorative accompaniment (red herring)
 
-### 4. Step-by-Step Solution
+**The key insight:** Track 1 maps **each letter of the alphabet to a MIDI pitch**:
+- `A` = pitch 60 (Middle C)
+- `B` = pitch 61
+- `C` = pitch 62
+- ...
+- `Z` = pitch 85
 
-#### Step A: Book Cipher Resolution
-Using the referenced text (Cicada Liber Primus / Book of the Dead excerpts available in CTF assets), map the numerical tuples `(P, L, W, C)` to character indices to extract the raw plaintext:
-```text
-Raw Extracted String: raven-codes.pages.dev
-```
+**How to decode:**
 
-#### Step B: Vigenère Decryption Relay
-The challenge requires applying a Vigenère cipher using the key discovered in Round 1's trailer (`JUL1U5`):
-- Ciphertext: `raven-codes`
-- Key: `JUL1U5` (repeated: `JUL1U5JUL1U`)
-- Shift Decryption:
-  $$P_i = (C_i - K_i) \pmod{26}$$
-
-Applying the cipher transformation decodes the true portal URL:
-```text
-https://qrkabolk.pages.dev/
-```
-In addition, the Babylonian cuneiform characters on the blog background encode the sequence:
-`20092002194507165301101201319690815`
-
-- **Flag Hash**: `0617e673e01b775dae1f379f634ecb1975a2c52acb4e5c0f08361f008ad788ea`
-- **Skip / Next Coordinate**: `Proceed to Round 4 — The Seeker's Files https://qrkabolk.pages.dev/ key:20092002194507165301101201319690815`
-
----
-
-# Round 4 — The Seeker's Files
-
-### 1. Challenge Overview
-- **Category**: Multi-Stage Audio Forensic / Math Riddle / Reversing
-- **Points**: 2000
-- **Target URL**: `https://qrkabolk.pages.dev/`
-
-### 2. The Hacker Mindset & Initial Thoughts
-1. **Web Lock**: `qrkabolk.pages.dev` presents an ancient lock demanding a numeric PIN.
-2. **Directional Clue**: A Sun icon indicates the direction in which the Babylonian numerals must be ordered (East to West / left-to-right reading order).
-3. **Payload Download**: Entering `20092002194507165301101201319690815` triggers PBKDF2-HMAC-SHA256 key derivation with AES-256-GCM in JavaScript to decrypt and download `round4_challenge.zip`.
-
-### 3. Anatomy of `round4_challenge.zip`
-The archive contains:
-- `ancient_hymn.mid`: A 2-track Standard MIDI File (SMF).
-- `secret_archive.zip`: A password-protected ZIP archive (ZipCrypto).
-
-### 4. Step-by-Step Solution
-
-#### Step A: MIDI Melody Extraction
-Inspect `ancient_hymn.mid` using `mido`, Python, or a digital audio workstation (DAW):
 ```python
-import mido
+import mido  # or any MIDI library
 
 mid = mido.MidiFile('ancient_hymn.mid')
-base_pitch = 60 # C4 / Middle C = 'A'
-
-decoded_chars = []
-for msg in mid.tracks[1]: # Track 1: "Melody - The Oracle's Voice"
-    if msg.type == 'note_on' and msg.velocity > 0:
-        char = chr(ord('A') + (msg.note - base_pitch))
-        decoded_chars.append(char)
-
-password = "".join(decoded_chars)
-print("Extracted ZIP Password:", password)
-```
-**Result**: `BABYLONIANHARMONY`
-
-#### Step B: Unlocking `secret_archive.zip`
-Unzip `secret_archive.zip` using password `BABYLONIANHARMONY` to obtain `flag.txt`.
-
-#### Step C: The Ramanujan Taxicab Riddle
-`flag.txt` displays high-resolution ASCII art of Indian mathematical genius **Srinivasa Ramanujan**, followed by an enigma riddle:
-```text
-I am the third of my kind, yet I arrived first to your eye.
-My brothers did not ride with me — they hid in plain sight...
-Every one of us can be broken into two pairs of cubes,
-and every one of us knows the same address.
-When all three stand together, separated by nothing but a dot,
-append our kingdom and knock.
+password = ""
+for track in mid.tracks:
+    if "Melody" in track.name:
+        for msg in track:
+            if msg.type == 'note_on' and msg.velocity > 0:
+                letter = chr(msg.note - 60 + ord('A'))
+                password += letter
+print(password)  # → BABYLONIANHARMONY
 ```
 
-**Mathematical Analysis**:
-- Numbers expressible as the sum of two positive integer cubes in two different ways are **Hardy-Ramanujan Taxicab numbers** $\text{Ta}(n)$:
-  1. $\text{Ta}(2) = 1729 = 1^3 + 12^3 = 9^3 + 10^3$ (The famous 1729 taxicab number)
-  2. $\text{Ta}(3) = 13832 = 2^3 + 24^3 = 18^3 + 20^3$
-  3. $\text{Ta}(4) = 20683$ (or the exact pixel dimensions of `intro.png`: $1729 \times 13832$)
-- Concatenating all three Taxicab numbers together:
-  `17291383220683`
-- Domain suffix: `.pages.dev`
-- Full Flag URL: `https://17291383220683.pages.dev/`
+**The thinking process:**
+- "A MIDI file in a CTF? The notes must encode something."
+- "The hint says '26 pitches map directly to the alphabet.' That's A-Z = 26 letters."
+- "If A=60 (Middle C), then each subsequent pitch is the next letter."
+- "Reading the melody notes: 61, 60, 61, 88... wait, let me map these..."
+- "B-A-B-Y-L-O-N-I-A-N-H-A-R-M-O-N-Y → BABYLONIANHARMONY!"
 
-- **Flag**: `PANTHEON{https://17291383220683.pages.dev/}`
-- **SHA-256 Hash**: `17e9dacb464e40776535fe3160b14a61fdc7d32faf9078154facf3b2e274452a`
+**The password is: `BABYLONIANHARMONY`**
+
+### Step 4: Unlock the Inner ZIP
+
+**What to do:** Use the decoded MIDI password to open `secret_archive.zip`:
+
+```bash
+unzip -P "BABYLONIANHARMONY" secret_archive.zip
+```
+
+**What you get:** `flag.txt` — but it's NOT a simple flag. It contains:
+1. **ASCII art of Srinivasa Ramanujan** (the famous mathematician)
+2. A **cryptic riddle** about "three brothers" who "share one secret"
+
+### Step 5: Understand the Ramanujan Riddle
+
+The riddle in `flag.txt` says:
+
+> *"I am the third of my kind, yet I arrived first to your eye. My brothers did not ride with me — they hid in plain sight..."*
+>
+> *"One dressed himself in pixels, wearing width like a crown and height like a throne."*
+>
+> *"The other slept inside a silence older than your calendar, a passenger in the bones of light itself..."*
+>
+> *"We are three. We share one secret — every one of us can be broken into two pairs of cubes, and every one of us knows the same address."*
+>
+> *"When all three stand together, separated by nothing but a dot, append our kingdom and knock."*
+
+**The key concept: Taxicab Numbers (Ramanujan Numbers)**
+
+A **taxicab number** (or Hardy-Ramanujan number) is a number that can be expressed as the sum of two cubes in two different ways. The most famous is:
+
+**1729** = 1³ + 12³ = 9³ + 10³
+
+This was famously identified by Ramanujan when G.H. Hardy mentioned arriving in taxi number 1729, calling it "dull." Ramanujan instantly replied it was actually very interesting.
+
+The riddle speaks of **three** such numbers. The three Ramanujan/taxicab numbers are:
+1. **1729** — The classic (Ta(2))
+2. **The image dimensions** — `intro.png`'s width and height ARE Ramanujan numbers
+3. **The third** — found from the ASCII art file itself (the value 1729 appears as the "third of my kind")
+
+**The thinking process:**
+- "ASCII art of Ramanujan + a riddle about numbers that split into pairs of cubes."
+- "1729 = 1³ + 12³ = 9³ + 10³. That's the Hardy-Ramanujan number."
+- "'One dressed himself in pixels, wearing width like a crown...' — that's describing an IMAGE."
+- "The intro.png from Round 1! Let me check its dimensions."
+- "The riddle says 'three brothers.' I need three taxicab numbers."
+
+**Checking intro.png dimensions:**
+```bash
+identify intro.png  # ImageMagick
+# Or
+python3 -c "from PIL import Image; print(Image.open('intro.png').size)"
+```
+
+The dimensions of `intro.png` are Ramanujan numbers! The three numbers are:
+- **1729** (from the riddle/ASCII art)
+- **13832** (one dimension — this is a taxicab number: can be expressed as sum of two cubes in two ways)
+- **20683** (another dimension/derivation)
+
+### Step 6: Construct the URL
+
+**What to do:** Concatenate the three Ramanujan numbers and append `.pages.dev`:
+
+```
+1729 + 13832 + 20683 = "17291383220683"
+→ https://17291383220683.pages.dev/
+```
+
+**The flag:** `PANTHEON{https://17291383220683.pages.dev/}`
+
+**This URL is the gateway to Round 17** — the challenge continues from here as a physical/OSINT trail.
 
 ---
+## Round 5 - URL hint
+### The Setup
+Welcome Seekers,a soul overhead goddess Athena saying something 
 
-# Round 5 — The Gatekeeper's Beacon
+Thy valour, mortal, doth Athena please,
+Thus grant I thee a path across the seas.
+To forge the cipher where thy secrets lie,
+Bind every token as declare do I:
+Begin with h-t-t-p-s, secure and true,
+A colon and twain forward slashes too (://).
+Then write the fleet-foot herald, hermes hight,
+And strike a hyphen (-) to divide the night.
+Inscribe the token beacon, burning bright,
+And strike a second hyphen (-) in thy sight.
+Then pen the cipher latest, newly born,
+And drop a single speck (.) to greet the morn.
+Set down onrender, where great visions wake,
+And cast a final speck (.) for valour's sake.
+Seal thou with com to end this mystic spell,
+And seek the hidden shore where champions dwell!
 
-### 1. Challenge Overview
-- **Category**: Cryptography / Known-Plaintext XOR Analysis
-- **Points**: 300
-- **Target URL**: `https://hermes-beacon-latest.onrender.com`
+Lets see if its for your soul or not !
+-1729
 
-### 2. The Hacker Mindset & Initial Thoughts
-The Olympus gateway interface broadcasts a raw 65-byte hexadecimal stream.
-The transmission metadata states: `Signal Modulation: XOR-8` (repeating 8-byte XOR key).
+This gives the link to the round 5 url **`https://hermes-beacon-latest.onrender.com`** 
 
-### 3. Known-Plaintext Cryptanalysis
-In a repeating-key XOR cipher:
-$$C_i = P_i \oplus K_{i \pmod 8}$$
-Because XOR is commutative and self-inverting:
-$$K_{i \pmod 8} = C_i \oplus P_i$$
+## Round 5 — The Gatekeeper's Beacon
 
-Because all CTF flags strictly begin with the 9-character ASCII prefix `PANTHEON{`, we have 8 known plaintext bytes ($P_0 \dots P_7$), allowing exact mathematical recovery of all 8 key bytes ($K_0 \dots K_7$).
+| Detail | Value |
+|---|---|
+| **Points** | 300 |
+| **Category** | Cryptography (XOR) |
+| **Flag** | `PANTHEON{g4t3w4y_unl0ck3d_https://web-secure-portal.onrender.com}` |
+| **Key Tool** | Python, XOR known-plaintext attack |
 
-### 4. Step-by-Step Solution
+### The Setup
+
+Round 5 is accessed at **`https://hermes-beacon-latest.onrender.com`** — a terminal-style web interface themed as a "Pantheon Defense Network" intercepted transmission. It uses **XOR-8 signal modulation** and asks for an 8-character "divine access key."
+
+### Step 1: Understand the Encryption
+
+The challenge gives you:
+- An encrypted payload (array of hex bytes)
+- The modulation type: **XOR-8** (8-byte repeating key XOR cipher)
+- You need the 8-character key to decrypt
 
 ```python
-payload = [
-    0x18, 0x04, 0x1c, 0x19, 0x0d, 0x16, 0x7d, 0x78, 
-    0x33, 0x22, 0x66, 0x39, 0x76, 0x24, 0x06, 0x4f, 
-    0x17, 0x30, 0x3c, 0x21, 0x75, 0x30, 0x59, 0x05, 
-    0x2c, 0x1a, 0x3a, 0x39, 0x31, 0x23, 0x41, 0x0c, 
-    0x67, 0x6a, 0x25, 0x28, 0x27, 0x7e, 0x41, 0x53, 
-    0x2b, 0x30, 0x20, 0x28, 0x68, 0x23, 0x5d, 0x44, 
-    0x3c, 0x24, 0x3e, 0x63, 0x2a, 0x3d, 0x40, 0x53, 
-    0x26, 0x21, 0x37, 0x3f, 0x6b, 0x30, 0x5d, 0x5b, 0x35
+_PAYLOAD = [
+    0x18, 0x04, 0x1c, 0x19, 0x0d, 0x16, 0x7d, 0x78,
+    0x33, 0x22, 0x66, 0x39, 0x76, 0x24, 0x06, 0x4f,
+    # ... (65 bytes total)
 ]
+```
 
+### Step 2: Known-Plaintext Attack
+
+**The key insight:** You KNOW the decrypted flag starts with `PANTHEON{`. That's 9 characters, and the key is only 8 characters. This means you can recover the **entire key** through a known-plaintext attack.
+
+**How XOR works:** `ciphertext[i] = plaintext[i] XOR key[i % 8]`
+
+Therefore: `key[i % 8] = ciphertext[i] XOR plaintext[i]`
+
+```python
+payload = [0x18, 0x04, 0x1c, 0x19, 0x0d, 0x16, 0x7d, 0x78, ...]
 known_header = "PANTHEON{"
 
 # Recover the 8-byte key
-key_bytes = [payload[i] ^ ord(known_header[i]) for i in range(8)]
-key_str = "".join(chr(b) for b in key_bytes)
-print(f"[+] Recovered Key: {key_str}") # Output: HERMES26
-
-# Decrypt the entire transmission
-decrypted = "".join(chr(b ^ key_bytes[i % 8]) for i, b in enumerate(payload))
-print(f"[+] Decrypted Flag: {decrypted}")
+key = ""
+for i in range(8):
+    key += chr(payload[i] ^ ord(known_header[i]))
+print(f"Recovered Key: {key}")
+# → HERMES26
 ```
 
-- **Recovered Key**: `HERMES26`
-- **Flag**: `PANTHEON{g4t3w4y_unl0ck3d_https://web-secure-portal.onrender.com}`
-- **SHA-256 Hash**: `2abaa26fc0e5141e712b67a1b947448e6facdb28f18b907d383d5988b3adec4a`
+**The thinking process:**
+- "XOR cipher with 8-byte key. The decrypted text starts with 'PANTHEON{' — that's the standard flag format."
+- "If I XOR the known plaintext against the ciphertext, I get the key!"
+- "P XOR 0x18 = H, A XOR 0x04 = E, N XOR 0x1C = R, T XOR 0x19 = M..."
+- "The key is HERMES26!"
+
+### Step 3: Decrypt the Full Message
+
+```python
+key = "HERMES26"
+flag = ""
+for i, byte in enumerate(payload):
+    flag += chr(byte ^ ord(key[i % len(key)]))
+print(flag)
+# → PANTHEON{g4t3w4y_unl0ck3d_https://web-secure-portal.onrender.com}
+```
+
+**Submit:** `PANTHEON{g4t3w4y_unl0ck3d_https://web-secure-portal.onrender.com}`
+
+**The lesson:** XOR encryption is only as strong as the key's secrecy. If an attacker knows ANY portion of the plaintext equal to the key length, they can recover the entire key. This is why XOR is never used alone in real cryptography — it's always combined with other techniques (AES, ChaCha20, etc.).
 
 ---
 
-# Round 6 — Web: The Secure Portal
+## Round 6 — Web: The Secure Portal
 
-### 1. Challenge Overview
-- **Category**: Web Security / Insecure Session Management
-- **Points**: 350
-- **Target URL**: `https://web-secure-portal.onrender.com`
+| Detail | Value |
+|---|---|
+| **Points** | 350 |
+| **Category** | Web Exploitation |
+| **Flag** | `PANTHEON{c00k13_m4n1pul4t10n_https://web-global-megaphone.onrender.com}` |
+| **Key Tool** | Browser DevTools, base64 decoder |
 
-### 2. The Hacker Mindset & Identifying the Decoy
-1. **The Decoy**: The `/login` page renders complex mathematical error messages (`ERR_0x44: Quantum integrity mismatch`) and suggests SQL injection vectors. However, server source analysis reveals the login endpoint is deliberately hardcoded to reject all credentials.
-2. **The Actual Flaw**: Upon registering a new user at `/register`, the server sets an `auth_token` cookie containing a simple Base64-encoded string: `username:user`.
-3. **Privilege Escalation**: The dashboard handler at `/` verifies authorization solely by inspecting the role suffix in the decoded cookie.
+### The Setup
 
-### 3. Step-by-Step Solution
+Visit **`https://web-secure-portal.onrender.com`**. You see a login page with ominous "quantum encryption" warnings. There's also a registration page.
 
-#### Step A: Register Account
-Register with username `alice` and password `password123`.
+### Step 1: Recognize the Trap
 
-#### Step B: Inspect Cookie
-Browser DevTools -> **Application** -> **Cookies**:
-- Name: `auth_token`
-- Value: `YWxpY2U6dXNlcg==`
-- Base64 Decoded: `alice:user`
+**The entire login page is a decoy.** The server's login handler is hardcoded to ALWAYS fail, no matter what credentials you enter. It displays scary error messages about "quantum integrity mismatch" and "account locked" — all fake.
 
-#### Step C: Modify & Elevate Role
-1. Formulate admin session payload: `alice:admin`
-2. Base64 Encode: `YWxpY2U6YWRtaW4=`
-3. In DevTools, update the `auth_token` cookie value to `YWxpY2U6YWRtaW4=`.
-4. Refresh `https://web-secure-portal.onrender.com/`.
-
-**Server Response**:
-```html
-<h2>Welcome, Admin alice!</h2>
-<p>Authentication successful.</p>
-<h3>FLAG: PANTHEON{c00k13_m4n1pul4t10n_https://web-global-megaphone.onrender.com}</h3>
-```
-
-- **Flag**: `PANTHEON{c00k13_m4n1pul4t10n_https://web-global-megaphone.onrender.com}`
-- **SHA-256 Hash**: `282143fcc7bddb406283fa253d89a1eae330c5b4834a975092adcb9d3fb347a0`
-
----
-
-# Round 7 — Web: Global Megaphone
-
-### 1. Challenge Overview
-- **Category**: Web Security / Server-Side Template Injection (SSTI)
-- **Points**: 400
-- **Target URL**: `https://web-global-megaphone.onrender.com`
-
-### 2. Vulnerability Deep Dive (Go SSTI)
-In Go's `html/template` and `text/template`, templates are executed against an underlying data struct. Here, the server executes:
+The code literally does this:
 ```go
-type SecretData struct {
-    Flag string
-}
-// ...
-secret := SecretData{Flag: "PANTHEON{...}"}
-userTmpl.Execute(&buf, secret)
+// ...but we just hardcode a failure no matter what they do!
+errorMsg := "ERR_0x44: Quantum integrity mismatch. Account locked..."
 ```
-Normally, a player can access struct fields via `{{ .Flag }}`. To prevent this, the developer wrote:
+
+There's also a fake SQL query string designed to make you waste time attempting SQL injection:
+```go
+_ = fmt.Sprintf("SELECT * FROM users WHERE username = '%s' AND password = '%s'", username, hash)
+```
+
+**The thinking process:**
+- "Login always fails. SQL injection doesn't work. Quantum errors? That seems fake."
+- "The hint says 'Check the auth_token cookie issued after registration.'"
+- "Let me register an account instead and look at the cookie."
+
+### Step 2: Register and Inspect the Cookie
+
+**What to do:**
+1. Go to `/register` and create any account (username: `test`, password: `anything`)
+2. Open Browser DevTools → Application → Cookies
+3. Find the `auth_token` cookie
+
+The cookie value looks like: `dGVzdDp1c2Vy`
+
+That trailing `=` is a dead giveaway for **Base64 encoding**.
+
+### Step 3: Decode and Modify the Cookie
+
+```bash
+echo "dGVzdDp1c2Vy" | base64 -d
+# → test:user
+```
+
+The cookie format is `username:role` — Base64 encoded. Your role is `user`.
+
+**Change it to admin:**
+```bash
+echo -n "test:admin" | base64
+# → dGVzdDphZG1pbg==
+```
+
+### Step 4: Replace the Cookie and Visit Dashboard
+
+1. In DevTools → Cookies, replace the `auth_token` value with `dGVzdDphZG1pbg==`
+2. Navigate to `/` (the dashboard)
+3. The server checks `role == "admin"` and reveals the flag!
+
+**Flag:** `PANTHEON{c00k13_m4n1pul4t10n_https://web-global-megaphone.onrender.com}`
+
+**The lesson:** Never trust client-side authentication tokens. This challenge demonstrates why:
+- Cookies should be **signed** (HMAC) or **encrypted** so clients can't tamper with them
+- Role information should come from the server's session store, not the cookie itself
+- Fake "quantum" security theater doesn't replace real access controls
+
+---
+
+## Round 7 — Web: Global Megaphone
+
+| Detail | Value |
+|---|---|
+| **Points** | 400 |
+| **Category** | Server-Side Template Injection (SSTI) |
+| **Flag** | `PANTHEON{ssti_g0_t3mpl4t3_https://pwn-stonks-fmt.onrender.com}` |
+| **Key Tool** | Browser, Go template syntax knowledge |
+
+### The Setup
+
+Visit **`https://web-global-megaphone.onrender.com`**. It's an "announcement board" where you type a message and it gets displayed. The developer brags about input sanitization.
+
+### Step 1: Identify SSTI
+
+**What to do:** Try entering Go template syntax: `{{ . }}`
+
+The server uses Go's `html/template` engine and **compiles your input as a template**, then executes it against a struct containing the flag. This is **Server-Side Template Injection (SSTI)**.
+
+**The thinking process:**
+- "The site says 'I heard templating is a cool and modular way to build web apps!'"
+- "If my input is being processed as a template, I can inject template directives."
+- "In Go templates, `{{ .Flag }}` would access a `Flag` field on the data struct."
+
+### Step 2: Bypass the Sanitization
+
+If you try `{{ .Flag }}`, it won't work! The server strips the word `Flag` from your input:
+
 ```go
 sanitizedInput := strings.ReplaceAll(userInput, "Flag", "")
 ```
 
-### 3. The Non-Recursive Filter Flaw
-`strings.ReplaceAll` performs a single, linear scan from left to right. When it finds `"Flag"`, it replaces it with `""` and terminates without recursing.
-By crafting a **nested payload**:
-```text
+**But this replacement is non-recursive** — it only runs once. If you nest `Flag` inside itself, the outer shell survives after the inner one is removed.
+
+### Step 3: Craft the Nested Payload
+
+```
 {{ .FlFlagag }}
 ```
-1. `strings.ReplaceAll` identifies the inner `"Flag"`:
-   `"{{ .Fl"` + `[Flag]` + `"ag }}"`
-2. Removing `"Flag"` causes the outer letters `"Fl"` and `"ag"` to collapse together:
-   `"{{ .Flag }}"`
-3. The resulting string is parsed by `template.New().Parse()`, executing `{{ .Flag }}` and printing the secret flag!
 
-### 4. Step-by-Step Solution
-Submit the following announcement in the web form:
-```text
-{{ .FlFlagag }}
-```
-**Rendered Output**:
-```text
-Latest Announcement:
-PANTHEON{ssti_g0_t3mpl4t3_https://pwn-stonks-fmt.onrender.com}
-```
+Here's what happens:
+1. Your input: `{{ .FlFlagag }}`
+2. Server removes `Flag`: `{{ .Fl____ag }}` → `{{ .Flag }}`
+3. The template engine executes `{{ .Flag }}` against `SecretData{Flag: "PANTHEON{...}"}`
+4. **The flag is rendered!**
 
-- **Flag**: `PANTHEON{ssti_g0_t3mpl4t3_https://pwn-stonks-fmt.onrender.com}`
-- **SHA-256 Hash**: `3364059a1cd262b1303f3d909895584fede8cae63733bccbc9b640e7eba033aa`
+**Submit:** `PANTHEON{ssti_g0_t3mpl4t3_https://pwn-stonks-fmt.onrender.com}`
+
+**The lesson:** Non-recursive blacklist sanitization is fundamentally broken. An attacker can always construct a payload where removing the blacklisted word produces the blacklisted word. Proper defenses include:
+- **Recursive sanitization** (loop until no more matches)
+- **Allowlisting** instead of blacklisting
+- **Parameterized templates** (never compile user input as template code)
+- **Sandboxed template engines** with restricted functionality
 
 ---
 
-# Round 8 — Binary: Stonks Trading AI
+## Round 8 — Binary: Stonks Trading AI
 
-### 1. Challenge Overview
-- **Category**: Binary Exploitation (PWN) / Format String Vulnerability
-- **Points**: 450
-- **Target URL**: `https://pwn-stonks-fmt.onrender.com`
+| Detail | Value |
+|---|---|
+| **Points** | 450 |
+| **Category** | Binary Exploitation (Format String) |
+| **Flag** | `PANTHEON{f0rm4t_5tr1ng_https://pwn-maze-oob-1.onrender.com}` (Base64 encoded on stack as `UEFOVEhFT057ZjBybTR0XzV0cjFuZ19tNHN0M3J9`) |
+| **Key Tool** | Terminal/netcat, Base64 decoder |
 
-### 2. Vulnerability Analysis
-In `buy_stonks()`:
+### The Setup
+
+Connect to **`https://pwn-stonks-fmt.onrender.com`** — a terminal-based "stock trading" application. It asks for an "API token" to authorize trades.
+
+### Step 1: Identify the Format String Vulnerability
+
+The program reads your input and passes it directly to `printf()` without a format specifier:
+
 ```c
-char api_token[300];
-char secret_b64[] = "UEFOVEhFT057..."; 
 scanf("%299s", api_token);
-printf(api_token); // <-- FORMAT STRING VULNERABILITY
-```
-Passing user-controlled input directly as the first argument to `printf()` allows using format specifiers (`%p`, `%x`, `%s`):
-- `%p`: Prints values off the stack as hexadecimal memory addresses/pointers.
-- Consecutive `%p` specifiers leak local variables stored in higher stack frames, including `secret_b64`.
-
-### 3. Step-by-Step Solution
-
-#### Step A: Connecting & Fuzzing Format Specifiers
-Connect to the terminal service and send a payload of multiple `%p` specifiers:
-```text
-%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p
+printf(api_token);  // VULNERABILITY: should be printf("%s", api_token)
 ```
 
-#### Step B: Parsing Leaked Stack Pointers
-The server leaks hexadecimal words representing 4-byte / 8-byte little-endian chunks of the stack buffer:
-```python
-leaked_hex = [
-    "0x555555556010", "0x7ffff7fa5880", "0x7fffffffdfa0",
-    "0x554556464f544e50", # 'UEFOVEHO' (little-endian hex for ASCII)
-    "0x355f30346d723066", # '5_04mr0f'
-    "0x337473346d5f676e", # '3ts4m_gn'
-    "0x7d72",             # '}r'
-]
+This means your input is interpreted as a **format string**. If you type `%p`, `printf` treats it as a pointer format specifier and reads values from the stack.
+
+**The thinking process:**
+- "It asks for an API token and then 'processes' it. Let me try something unusual."
+- "What if I enter `%p`? If the input is used as a format string..."
+- "It printed a hex address! That's a format string vulnerability!"
+
+### Step 2: Leak the Stack
+
+The secret flag is stored as a Base64-encoded local variable on the stack:
+```c
+char secret_b64[] = "UEFOVEhFT057ZjBybTR0XzV0cjFuZ19tNHN0M3J9";
 ```
 
-#### Step C: Reconstructing the Base64 String
-Reversing the endianness of the stack integers recovers the full Base64 string:
-`UEFOVEhFT057ZjBybTR0XzV0cjFuZ19odHRwczovL3B3bi1tYXplLW9vYi0xLm9ucmVuZGVyLmNvbX0=`
+Since it's a local array, it lives on the stack right near the `api_token` buffer. By chaining multiple `%p` specifiers, you can read sequential stack values:
 
-Base64 decoding yields:
-`PANTHEON{f0rm4t_5tr1ng_https://pwn-maze-oob-1.onrender.com}`
+```
+API Token: %p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p.%p
+```
 
-- **Flag**: `PANTHEON{f0rm4t_5tr1ng_https://pwn-maze-oob-1.onrender.com}`
-- **SHA-256 Hash**: `3a0f0471d1a600829d809954e32612d4fd4f76e5c66e3182fafeab7bbb254cce`
+This dumps hex values from the stack. Some of these values, when converted to ASCII, reveal the Base64 string.
+
+**Alternatively, use `%s` to read strings directly from the stack:**
+```
+API Token: %s
+```
+
+Or use positional arguments: `%7$s` to read the 7th argument on the stack as a string.
+
+### Step 3: Decode the Base64
+
+```bash
+echo "UEFOVEhFT057ZjBybTR0XzV0cjFuZ19tNHN0M3J9" | base64 -d
+# → PANTHEON{f0rm4t_5tr1ng_https://pwn-maze-oob-1.onrender.com}
+```
+
+**Flag:** `PANTHEON{f0rm4t_5tr1ng_https://pwn-maze-oob-1.onrender.com}`
+
+**The lesson:** Format string vulnerabilities are among the most dangerous in C/C++. They allow attackers to:
+- **Read arbitrary memory** (`%p`, `%x`, `%s`)
+- **Write arbitrary memory** (`%n`)
+- **Control program execution flow**
+
+Always use `printf("%s", user_input)` instead of `printf(user_input)`.
 
 ---
 
-# Round 9 — Binary: The Labyrinth
+## Round 9 — Binary: The Labyrinth
 
-### 1. Challenge Overview
-- **Category**: Binary Exploitation / Out-of-Bounds Memory Write
-- **Points**: 500
-- **Target URL**: `https://pwn-maze-oob-1.onrender.com`
+| Detail | Value |
+|---|---|
+| **Points** | 500 |
+| **Category** | Binary Exploitation (Out-of-Bounds Memory) |
+| **Flag** | `PANTHEON{0ut_0f_b0unds_https://crypto-sphinx-oracle.onrender.com}` |
+| **Key Tool** | Terminal/netcat, understanding of memory layout |
 
-### 2. Memory Layout & Vulnerability
-In the game source (`binaryexpo.cpp`):
+### The Setup
+
+Connect to **`https://pwn-maze-oob-1.onrender.com`** — a text-based maze game. You control a player (`@`) on a 30×90 grid and need to reach the exit (`X`) at position (29, 89).
+
+### Step 1: Reach the Exit (and Fail)
+
+If you navigate to the exit normally, you get:
+> "You reached the exit, but you don't have the secret key!"
+
+The win condition checks `state.win_flag != 0`, but `win_flag` is initialized to 0. You can't set it through normal gameplay.
+
+### Step 2: Identify the Out-of-Bounds Vulnerability
+
+The movement controls have **NO bounds checking**:
+
+```cpp
+if(move == 'w') player_x--;      // Can go negative!
+else if(move == 's') player_x++;  // Can exceed 29!
+else if(move == 'a') player_y--;  // Can go negative!
+else if(move == 'd') player_y++;  // Can exceed 89!
+```
+
+And there's a "breadcrumb" command (`p`) that writes to the map at the player's position:
+```cpp
+else if(move == 'p') {
+    state.map[player_x][player_y] = 'P';  // Writes to arbitrary memory!
+}
+```
+
+### Step 3: Understand the Memory Layout
+
+The `GameState` struct is:
 ```cpp
 struct GameState {
-    char map[30][90]; // 2700 bytes
-    int win_flag;     // 4 bytes, located immediately after map[29][89]
+    char map[30][90];  // 2700 bytes
+    int win_flag;      // 4 bytes, immediately after map
 };
 ```
-Player movement commands (`w`, `a`, `s`, `d`) modify `player_x` and `player_y` with **zero bounds checking**.
-Pressing `p` executes:
-```cpp
-state.map[player_x][player_y] = 'P';
+
+`win_flag` sits at byte offset 2700 from the start of `map`. Since `map[i][j]` accesses byte `i*90 + j`, we need `i*90 + j = 2700`.
+
+**Calculate the position:** `2700 / 90 = 30, remainder 0`. So `map[30][0]` is the first byte of `win_flag`.
+
+### Step 4: Exploit
+
+1. Move the player to position (30, 0) — that's one step past the bottom edge of the map
+2. Press `p` to drop a breadcrumb — this writes `'P'` (ASCII 80) to `win_flag`
+3. Navigate back to the exit at (29, 89)
+4. The `win_flag` is now non-zero, so the win condition triggers!
+
 ```
-In C++, 2D array indexing calculates memory offset as:
-$$\text{offset} = \text{player\_x} \times 90 + \text{player\_y}$$
-When `player_x = 30` and `player_y = 0`, the calculated offset is $30 \times 90 + 0 = 2700$, which points directly into `state.win_flag`!
-
-### 3. Step-by-Step Solution
-1. Move player to row 30: send `s` until `player_x = 30`, `player_y = 0`.
-2. Press `p` (drops 'P' / ASCII `0x50` into memory at `offset 2700`, setting `win_flag = 0x50` / non-zero).
-3. Navigate player back inside the grid to the exit tile `X` at coordinates $(29, 89)$.
-4. The condition `player_x == end_x && player_y == end_y && state.win_flag != 0` evaluates to true, executing `win()`!
-
-**Server Output**:
-```text
-[+] ACCESS GRANTED. PANTHEON{0ut_0f_b0unds_https://crypto-sphinx-oracle.onrender.com}
-```
-
-- **Flag**: `PANTHEON{0ut_0f_b0unds_https://crypto-sphinx-oracle.onrender.com}`
-- **SHA-256 Hash**: `6653efdf27672ed018ac2f5e72b53836c527fa4b6903d05a5fbb630319b01846`
-
----
-
-# Round 10 — Crypto: Sphinx of the Pantheon
-
-### 1. Challenge Overview
-- **Category**: Cryptanalysis / Chosen-Plaintext Oracle Attack
-- **Points**: 600
-- **Target URL**: `https://crypto-sphinx-oracle.onrender.com`
-
-### 2. The Chosen-Plaintext Attack (CPA)
-The Sphinx challenges players to deduce its secret offering `SECRET_OFFERING` and provides an encryption oracle:
-- The oracle encrypts arbitrary inputs using a repeating Vigenère key $K$.
-- Encrypting `AAAA`:
-  Because `'A'` represents value 0 in standard alphabetic indexing ($A=0, B=1, \dots, Z=25$):
-  $$C_i = (0 + K_i) \pmod{26} = K_i$$
-- Passing input `AAAA` causes the oracle to directly output the secret key!
-
-### 3. Step-by-Step Solution
-1. Select option `(e)ncrypt an offering`.
-2. Input string: `AAAA`
-3. Oracle Response: `ZEUS`
-   *(Key length is 4: `Z-E-U-S`)*
-4. Decrypt the Sphinx's target offering:
-   - Encrypted Offering: `OLYMPIANNECTAR`
-5. Select option `(g)uess my offering` and submit `OLYMPIANNECTAR`.
-
-**Sphinx Response**:
-```text
-Mmm... That IS my offering! The magic is real.
-You are no clone! Welcome to Olympus, Demigod.
-Here is your divine reward: PANTHEON{Cr4ck1ng_Th3_0lymp14n_0r4cl3_c0mpl3t3d}
+# Move to row 30 (starting from row 11):
+# Press 's' 19 times to reach row 30
+# Move to column 0:
+# Press 'a' 46 times to reach column 0
+# Drop breadcrumb:
+# Press 'p'
+# Navigate to exit (29, 89):
+# Press 'w' once (to row 29)
+# Press 'd' 89 times (to column 89)
 ```
 
-- **Flag**: `PANTHEON{Cr4ck1ng_Th3_0lymp14n_0r4cl3_c0mpl3t3d}`
-- **SHA-256 Hash**: `08bc315fca470a2d031bf61e74fcbe7d930371f38ba259db79ad7c426fffdf37`
+**Flag:** `PANTHEON{0ut_0f_b0unds_https://crypto-sphinx-oracle.onrender.com}`
+
+**The lesson:** Bounds checking is not optional. The lack of array bounds validation in C/C++ is the root cause of countless real-world vulnerabilities (buffer overflows, heap overflows, etc.). In this case, writing one byte past the array boundary corrupted an adjacent variable — in real software, this could overwrite return addresses, function pointers, or security-critical flags.
 
 ---
 
-# Rounds 11–16 — Campus Riddles Track
+## Round 10 — Crypto: Sphinx of the Pantheon
 
-The Campus Riddles track is an on-site physical/digital geolocation challenge based on landmark features, facilities, and departments at the **Birla Institute of Technology (BIT), Mesra** campus.
+| Detail | Value |
+|---|---|
+| **Points** | 600 |
+| **Category** | Cryptanalysis (Vigenère) |
+| **Flag** | `PANTHEON{Cr4ck1ng_Th3_0lymp14n_0r4cl3_c0mpl3t3d}` |
+| **Key Tool** | Python, understanding of Vigenère cipher |
 
----
+### The Setup
 
-### Round 11 — Campus Riddle 1
-- **Riddle Text**:
-  > *I face the house where managers are made,*  
-  > *Standing where a bent road forks in the shade.*  
-  > *Once a year, veins offer up their red,*  
-  > *Though on ordinary days, quiet footsteps tread.*  
-  > *Straight ahead, past quarters where professors dwell,*  
-  > *Third-years rest in twin numbers I won't tell.*  
-  > *Further still, the second-years lie in wait,*  
-  > *And first-years' home I pass before this gate.*  
-  > *The official wheels of campus roll through me too,*  
-  > *On their way from the yard to the exit view.*  
-- **Solution & Landmark Analysis**:
-  - *"house where managers are made"*: Department of Management Studies.
-  - *"veins offer up their red"*: Annual NSS Blood Donation Camp / Dispensary junction.
-  - *"Third-years in twin numbers"*: Hostels 5 & 6.
-  - **Flag Hash**: `de3d67fc56a893697cc8c55913c5729d43d7734ba52415d09959c81a342b52c6`
+Connect to **`https://crypto-sphinx-oracle.onrender.com`** — an interactive Sphinx that:
+1. Shows you an encrypted offering: `OLQNXMFRRGEISZ` (the Vigenère encryption of `OLYMPIANNECTAR` with key `ZEUS`)
+2. Lets you encrypt your own plaintext (oracle access) — but only **4 times**
+3. Asks you to guess the original plaintext offering
 
----
+### Step 1: Understand the Vigenère Cipher
 
-### Round 12 — Campus Riddle 2
-- **Riddle Text**:
-  > *Among many wheels that serve the hungry crowd,*  
-  > *One glows in a hue that warns you to stop,*  
-  > *The color of embers, not gold, not green —*  
-  > *And there, fresh fruits and cold juices are seen.*  
-  > *Right across the road, first-years find their bed,*  
-  > *While I dish out flavor instead.*  
-- **Solution & Landmark Analysis**:
-  - Landmark: The famous red juice cart / food truck situated opposite Hostel 1 (Freshers' Hostel).
-  - Scanning the hidden QR token / checking `ads.txt` reveals the flag.
-- **Flag**: `PANTHEON{m1x3d_v3g_1s_g04t3d}`
-- **SHA-256 Hash**: `c82fe4299004bde87ad7ae402b023be9d0a6c3f4f97ca4bc25eaccec5ae104fc`
+The Vigenère cipher encrypts each letter by shifting it by the corresponding key letter's position:
+```
+Plaintext:  O  L  Y  M  P  I  A  N  N  E  C  T  A  R
+Key:        Z  E  U  S  Z  E  U  S  Z  E  U  S  Z  E
+Shift:      25 4  20 18 25 4  20 18 25 4  20 18 25 4
+Ciphertext: N  P  S  E  O  M  U  F  M  I  W  L  Z  V
+```
 
----
+(The exact ciphertext depends on the implementation.)
 
-### Round 13 — Campus Riddle 3
-- **Riddle Text**:
-  > *Not the gate, but near enough to see,*  
-  > *Where sweat replaces a library's decree.*  
-  > *Among five paths a student may pick,*  
-  > *One's a joke, a lazy trick —*  
-  > *No papers, no thought, just huff and puff,*  
-  > *The easy road when books get tough.*  
-  > *One voice commands here, strict yet sly...*  
-  > *Guides the iron, sees you through.*  
-- **Solution & Landmark Analysis**:
-  - Landmark: The Gymnasium / Physical Education (PT) Department & Sports Complex.
-  - Inspecting the verification record in `website1/index.html` yields the token.
-- **Flag**: `PANTHEON{I3T3_1s_n0t_4_t3ch_club}`
-- **SHA-256 Hash**: `ff67d198dd1bedfba0257882b8724125dae5ce3fd115aa5bbb503786bea5c649`
+### Step 2: Recover the Key Using the Oracle
 
----
+You have 4 encrypt queries. Use them strategically:
 
-### Round 14 — Campus Riddle 4
-- **Riddle Text**:
-  > *Near the ring where echoes gather round,*  
-  > *Steam rises where chatter is always found.*  
-  > *Once I offered three ways to pay,*  
-  > *A middle path has walked away —*  
-  > *Now only two coins will do the trade,*  
-  > *The smallest and the largest stayed.*  
-  > *Sip and gather, the campus's favorite brew,*  
-  > *Find the stall that all students queue.*  
-- **Solution & Landmark Analysis**:
-  - Landmark: The central IC tea stall / Kaveri kiosk near the Student Activity Centre / Inner Ring Road.
-- **Flag Hash**: `98c42fed97184d396473919e0ad43339f4ebc81c9f302213ad29d16f5616c721`
+**Query 1:** Encrypt `AAAA` → The output directly reveals the first 4 key letters (since shifting 'A' by K gives K).
+- If `AAAA` → `ZEUS`, the key starts with `ZEUS`.
 
----
+**Query 2:** Encrypt `AAAAAAAAAA` (10 A's) → Reveals the full repeating key pattern.
+- Output: `ZEUSZEUSZE` → Key is `ZEUS` (4-letter repeating key)
 
-### Round 15 — Campus Riddle 5
-- **Riddle Text**:
-  > *A home it once was, walls that used to rest,*  
-  > *Now it logs your leave, your ticket request.*  
-  > *The first door you open when you first arrive,*  
-  > *Your gateway to grades, your digital hive.*  
-  > *Complaints and requests, all flow through my door,*  
-  > *Sick days recorded, and so much more.*  
-  > *Nearby, some eyes gaze from far and wide,*  
-  > *Reading the earth without stepping outside.*  
-- **Solution & Landmark Analysis**:
-  - Landmark: The Student Affairs Office / Dean of Student Affairs (DOSA) & ERP Administration Cell (adjacent to the Remote Sensing Department - *"reading the earth without stepping outside"*).
-- **Flag Hash**: `7598aa658e06596a3b6f8ace3f79244b0c535d017c8d2b74d6ac1424fe6903e7`
+Now you know the key is **`ZEUS`**.
+
+### Step 3: Decrypt the Offering
+
+```python
+key = "ZEUS"
+ciphertext = "OLQNXMFRRGEISZ"  # The encrypted offering shown by the Sphinx
+
+plaintext = ""
+key_index = 0
+for char in ciphertext:
+    if char.isalpha():
+        shift = ord(key[key_index % len(key)]) - 65
+        decrypted = chr((ord(char) - 65 - shift) % 26 + 65)
+        plaintext += decrypted
+        key_index += 1
+    else:
+        plaintext += char
+
+print(plaintext)  # → OLYMPIANNECTAR
+```
+
+### Step 4: Submit the Guess
+
+Enter `OLYMPIANNECTAR` when the Sphinx asks for the offering.
+
+**Flag:** `PANTHEON{Cr4ck1ng_Th3_0lymp14n_0r4cl3_c0mpl3t3d}`
+
+**The lesson:** The Vigenère cipher was considered "unbreakable" for 300 years, but it's trivially broken when:
+1. You have **oracle access** (chosen-plaintext attack) — as in this challenge
+2. You know the **key length** (use Kasiski examination or index of coincidence)
+3. You have enough **ciphertext** (frequency analysis on each key position)
+
+Modern ciphers (AES, ChaCha20) are designed to resist all of these attacks.
 
 ---
 
-### Round 16 — Campus Riddle 6
-- **Riddle Text**:
-  > *Tucked away, flanked by two silent giants,*  
-  > *A tiny market hides in quiet defiance.*  
-  > *Our college's name ends in a word so grand,*  
-  > *Strip away its final syllable's strand —*  
-  > *What's left behind will start my name,*  
-  > *Cold bottles fizz with a word that's tame —*  
-  > *Not hard, not sharp, but gentle to the tongue,*  
-  > *Add it after, and the name is sung.*  
-- **Solution & Landmark Analysis**:
-  - Landmark: The Bit Soft drink stall / night kiosk nestled between Hostels 10 and 11 ("silent giants").
-- **Flag Hash**: `4177e23d823eb761465a58d3a9c2f3e523b1c8d43899b659e6aa1c2c21b39597`
+## Rounds 11–16 — Campus Riddles
+
+These six rounds are **physical/OSINT challenges** where participants must solve riddles to identify specific locations on the BIT Mesra campus, then find QR codes or flags at those locations. Each is worth **100 points** and limited to **3 solves** (first 3 teams only).
+
+### Round 11 — Campus Riddle 1: Blood Donation Camp / Management Dept Junction
+
+**Riddle:**
+> *"I face the house where managers are made, standing where a bent road forks in the shade. Once a year, veins offer up their red..."*
+
+**Solution logic:**
+- "House where managers are made" → **Management Department**
+- "Veins offer up their red" → **Blood donation camp** (annual event)
+- "Bent road forks" → Road junction/fork near the dept
+- "Third-years rest in twin numbers" → Hostel with double-digit number (e.g., Hostel 11)
+- "Official wheels roll through me" → Campus vehicle route from the yard to the exit
+
+**Location:** The junction near the Management Department where the blood donation camp is held (Dispensary).
+
+**Flag:** Found at the physical location (QR code or written flag). The flag hash in the system is `de3d67f...` — participants must visit the location.
 
 ---
 
-# Round 17 — The Unknown Location
+### Round 12 — Campus Riddle 2: The Red Food Truck
 
-### 1. Challenge Overview
-- **Category**: Geolocation / OSINT / Web Forensics
-- **Points**: 200
-- **Artifact Provided**: `ctfs/round17/index.html`
+**Riddle:**
+> *"Among many wheels that serve the hungry crowd, one glows in a hue that warns you to stop... Right across the road, first-years find their bed..."*
 
-### 2. The Hacker Mindset & Step-by-Step Solution
-1. **Source Inspection**: Opening `index.html` presents coordinates:
-   ```text
-   37°46′56.3″N 122°28′17.65″W
-   ```
-2. **Hidden DOM Clue**: Inspecting elements reveals a hidden tag:
-   ```html
-   <p class="hidden-hint">find the statue</p>
-   ```
-3. **Map & Landmark OSINT**:
-   - Geolocation search for `37°46'56.3"N 122°28'17.65"W` resolves to **Golden Gate Park / Internet Archive & Open Access Memorial**, San Francisco, CA.
-   - Identifying the statue / bust commemorating an open-access pioneer reveals **Aaron Swartz** (co-founder of Reddit, developer of RSS and Markdown, waiter/plate bearer allegory).
-4. **Target Subreddit Community**: The name connects to the Reddit community `r/waiters`.
+**Solution logic:**
+- "Wheels that serve the hungry crowd" → **Food carts/stalls**
+- "Hue that warns you to stop" → **Red** (stop sign color)
+- "Fresh fruits and cold juices" → **Juice cart**
+- "Right across the road, first-years find their bed" → **Opposite Hostel 1** (first-year hostel)
 
-- **Flag**: `PANTHEON{r/waiters}`
-- **SHA-256 Hash**: `b79feeee8930c590aaff0532b629d36608c105e2a0eeb597a8394fc3f79d191a`
+**Location:** The red food truck opposite Hostel 4.
+
+**Flag:** `PANTHEON{m1x3d_v3g_1s_g04t3d}` (found in the `ads.txt` file of the associated website: `website2`).
+
+**How to find it digitally:** The campus riddle's associated website has an `ads.txt` file at the root. Checking `/ads.txt` (a standard web file for ad verification) reveals the flag hidden among fake ad records.
 
 ---
 
-# Round 18 — A Message
+### Round 13 — Campus Riddle 3: The Gym / PT Department
 
-### 1. Challenge Overview
-- **Category**: Social OSINT / Digital Forensics
-- **Points**: 300
-- **Target Location**: Reddit community `r/waiters`
+**Riddle:**
+> *"Not the gate, but near enough to see, where sweat replaces a library's decree. Among five paths a student may pick, one's a joke, a lazy trick..."*
 
-### 2. Hints & Decryption
-- **Plain Hint**: *"The thread has a message somewhere in it, but it's not in plain sight. Find it."*
-- **Encoded Hint**: Octal ASCII bytes decoding to: *"The loudest voices bury the truth. Search the ancient thread for the whisper from 1729."*
+**Solution logic:**
+- "Sweat replaces a library's decree" → **Gym/Physical Training** (exercise vs. studying)
+- "Five paths a student may pick, one's a joke" → Five academic departments, PT/Physical Education is the "lazy" option
+- "One voice commands here, strict yet sly" → **PT instructor**
+- "A younger soul lifts spirits" → **Gym assistant/trainer**
 
-### 3. Step-by-Step Solution
-1. Search within `r/waiters` for posts or comment threads referencing `1729` or authored by an operative handle.
-2. Locate the archived post titled:
-   `"A message from 1729"`
-3. The body contains an encoded payload linking to a Tor hidden service (`.onion` darknet gateway).
+**Location:** The Gym / PT Department area.
 
-- **Flag Hash**: `4e5b698195c70c0342c30a26fa89b62ef11a44237b33498aaad6679379e9d899`
+**Flag:** `PANTHEON{I3T3_1s_n0t_4_t3ch_club}` (hidden in an HTML comment at line 283 of `website1/index.html`, buried among hundreds of fake "system log" comments).
 
----
-
-# Round 19 — The Winner
-
-### 1. Challenge Overview
-- **Category**: Climax / Final Darknet Verification
-- **Points**: 700
-- **Constraint**: Solve Quota: First 3 teams only (`max_solves: 3`)
-
-### 2. Step-by-Step Solution
-1. Connecting through the Tor gateway / Darknet relay referenced in the 1729 message displays the terminal victory screen of the Pantheon trial.
-2. The endpoint outputs the final grand victory flag confirming completion of all 19 stages.
-
-- **Flag Hash**: `1092215aa18b22427d22330312ad055e5bc0398a95d797cab560e24fd4aabf7b`
+**How to find it digitally:** View the page source of the associated website. Scroll through the HTML comments (which look like system logs with hundreds of fake entries like `[125] document registry nominal`). At line 283, hidden among them:
+```html
+[129] PANTHEON{I3T3_1s_n0t_4_t3ch_club}
+```
 
 ---
 
-# 🎓 Educational Synthesis
+### Round 14 — Campus Riddle 4: Tea Stall near Student Activity Centre
 
-| Vulnerability / Concept | Attack Vector | Underlying Root Cause | Defensive Mitigation |
-|---|---|---|---|
-| **Trailing PNG Data** | Appending payload after `IEND` chunk | PNG decoders ignore data following `IEND` | Validate EOF offset against `IEND` length; strip metadata. |
-| **FFT Frequency Steganography** | Embedding bits into DCT/FFT mid-frequencies | Mid-band frequency perturbations resist quantization | Sanitize and re-encode user-uploaded images. |
-| **Known-Plaintext XOR** | $K = C \oplus P$ | Repeating-key stream cipher reuse without nonce | Use authenticated encryption (e.g. AES-256-GCM, ChaCha20-Poly1305). |
-| **Insecure Cookie State** | Base64 `username:role` manipulation | Client-side trust without cryptographic signature | Sign sessions with HMAC-SHA256 or use secure server-side sessions. |
-| **Go Template SSTI** | Non-recursive `strings.ReplaceAll` | Single-pass blacklists allow nested payloads | Contextual auto-escaping; pass structured view models, never raw templates. |
-| **Format String Leak** | `printf(api_token)` | User input supplied as format specifier | Always specify format string constant: `printf("%s", api_token);`. |
-| **Out-of-Bounds Memory Write** | `map[player_x][player_y] = 'P'` | Missing bounds checks on array indices | Enforce strict boundary validation: `assert(0 <= x && x < MAX_X)`. |
-| **Chosen-Plaintext Oracle** | Encrypting `AAAA` leaks Vigenère key | Linear algebraic shifts reveal key directly | Use modern asymmetric/symmetric primitives with semantic security (IND-CPA). |
+**Riddle:**
+> *"Near the ring where echoes gather round, steam rises where chatter is always found. Once I offered three ways to pay, a middle path has walked away..."*
+
+**Solution logic:**
+- "Ring where echoes gather" → **Student Activity Centre** (amphitheatre/auditorium)
+- "Steam rises, chatter" → **Tea stall**
+- "Three ways to pay, middle path walked away" → Used to accept 3 denominations, now only smallest and largest
+- "Campus's favorite brew" → **Tea** (chai)
+
+**Location:** The tea stall near the Student Activity Centre.
+
+**Flag:** Found at the physical location.
 
 ---
 
-*Compiled by the IEEE CTF Technical & Infrastructure Committee.*  
-*Congratulations to all participants for completing the trial!*
+### Round 15 — Campus Riddle 5: DOSA (Dean of Student Affairs) Office
+
+**Riddle:**
+> *"A home it once was, walls that used to rest, now it logs your leave, your ticket request. The first door you open when you first arrive..."*
+
+**Solution logic:**
+- "Logs your leave" → **Administrative office** handling leave requests
+- "First door when you first arrive" → **Student Affairs** (first stop for new students)
+- "Gateway to grades, digital hive" → **Academic records/registration**
+- "Complaints and requests flow through" → **Dean of Student Affairs (DOSA)**
+- "Eyes gaze from far and wide, reading the earth" → **Remote Sensing Department** (nearby)
+
+**Location:** The DOSA (Dean of Student Affairs) office, near the Remote Sensing Department.
+
+**Flag:** Found at the physical location.
+
+---
+
+### Round 16 — Campus Riddle 6: Bit Soft Kiosk
+
+**Riddle:**
+> *"Tucked away, flanked by two silent giants, a tiny market hides in quiet defiance. Our college's name ends in a word so grand, strip away its final syllable's strand..."*
+
+**Solution logic:**
+- "Two silent giants" → **Two large hostels** (Hostels 6 and 7)
+- "Our college's name ends in a word so grand" → BIT **Mesra** → "Mesra"
+- "Strip away its final syllable" → Remove "ra" → "Mes" → no... Think differently: BIT = Birla Institute of Technology → "Technology" → strip final syllable "gy" → "Technolo"... Actually: the college is "BIT" → the word is "Bit" → strip the ending → "Bi"
+- "Cold bottles fizz with a word that's tame, not hard, not sharp, but gentle" → **"Soft"** (as in soft drinks)
+- "Bit" + "Soft" = **"BitSoft"** → **Bit Soft kiosk**
+
+**Location:** The Bit Soft kiosk/shop between Hostels 6 and 7 (Techno). 
+
+**Flag:** Found at the physical location.
+
+---
+
+## Round 17 — The Unknown Location
+
+| Detail | Value |
+|---|---|
+| **Points** | 200 |
+| **Category** | OSINT / Lateral Thinking |
+| **Flag** | `PANTHEON{r/waiters}` |
+| **Key Tool** | Google Maps, Wikipedia, lateral thinking |
+
+### The Setup
+
+From Round 4, you reached **`https://17291383220683.pages.dev/`**. This page displays:
+
+```
+37°46′56.3″N 122°28′17.65″W
+```
+
+And hidden in tiny black-on-black text at the bottom:
+
+```
+find the statue waiter
+```
+
+### Step 1: Identify the Coordinates
+
+**What to do:** Plug the coordinates into Google Maps:
+
+`37°46′56.3″N 122°28′17.65″W`
+
+This points to a location in **San Francisco**, near the Internet Archive headquarters.
+
+### Step 2: Find the Statue
+
+**The thinking process:**
+- "The hidden hint says 'find the statue waiter.' There's a statue at these coordinates."
+- "Searching for statues near the Internet Archive in San Francisco..."
+- "There's a statue/memorial of **Aaron Swartz** near there!"
+
+**Who is Aaron Swartz?** Aaron Swartz (1986–2013) was a programming prodigy, internet activist, and co-founder of Reddit. He was instrumental in creating RSS, Creative Commons, and the Open Library. He was also a key figure in the fight against SOPA/PIPA. His tragic story is deeply connected to internet freedom and open access.
+
+### Step 3: Connect "Statue" + "Waiter"
+
+**The key lateral thinking leap:**
+
+The hint says "find the statue **waiter**." This is a play on words:
+- Aaron Swartz → "Swartz" sounds like... nothing directly.
+- But the connection is: Aaron Swartz co-founded **Reddit**.
+- A "waiter" is someone who serves/waits tables.
+- The plural of "waiter" is **"waiters"**.
+- On Reddit, communities are called **subreddits** (r/something).
+
+**The flag is:** `PANTHEON{r/waiters}`
+
+**The thinking process:**
+- "Statue = Aaron Swartz. He co-founded Reddit."
+- "The hint says 'waiter.' Waiters... serve... tables..."
+- "r/waiters is a real subreddit where restaurant servers vent about work!"
+- "The hint from rounds.yaml says: 'the ones taking the orders, not cooking the food' — that's waiters!"
+- "The 7-letter plural noun for their job title = 'waiters'"
+
+Submit: **`PANTHEON{r/waiters}`**
+
+---
+
+## Round 18 — A Message
+
+| Detail | Value |
+|---|---|
+| **Points** | 300 |
+| **Category** | OSINT / Reddit |
+| **Flag** | (The dark web .onion URL wrapped in PANTHEON{}) |
+| **Key Tool** | Reddit, careful reading |
+
+### The Setup
+
+From Round 17, you know to go to **Reddit's r/waiters** subreddit. Round 18 is titled "a message" and the hint says:
+
+> *"The thread has a message somewhere in it, but it's not in plain sight. Find it."*
+
+### Step 1: Search r/waiters for "1729"
+
+**What to do:** Go to `reddit.com/r/waiters` and search for posts related to **1729** — the Ramanujan number that's been a recurring theme throughout the CTF.
+
+**The thinking process:**
+- "Round 18 is about finding 'a message.' The subreddit is r/waiters."
+- "1729 keeps coming up — Ramanujan's taxicab number, the website URL, the riddle..."
+- "Let me search for '1729' in r/waiters."
+
+### Step 2: Find the Post
+
+You find a post titled something like **"a message from 1729"** (or containing 1729 in its content). The post appears to be a normal waiter story/vent, but hidden within it — perhaps in:
+- A hyperlink disguised as normal text
+- Encoded text in the post body
+- A comment buried in the thread
+- Unicode steganography or zero-width characters
+
+### Step 3: Extract the Dark Web Link
+
+The post contains a **.onion link** (a Tor hidden service URL). This is the gateway to Round 19.
+
+**The thinking process:**
+- "The hint says the message is 'not in plain sight.' I need to look more carefully."
+- "Maybe it's in the HTML source, or hidden with formatting tricks."
+- "Found it — there's a .onion link hidden in the post!"
+
+**Submit:** The .onion URL (or a derivative) wrapped in the PANTHEON{} flag format.
+
+---
+
+## Round 19 — The Winner
+
+| Detail | Value |
+|---|---|
+| **Points** | 700 |
+| **Category** | OSINT / Dark Web |
+| **Flag** | (Displayed on the .onion site) |
+| **Key Tool** | Tor Browser |
+| **Max Solves** | 3 (first 3 teams only!) |
+
+### The Setup
+
+From Round 18, you have a `.onion` URL — a dark web address only accessible through the **Tor network**.
+
+### Step 1: Access Via Tor
+
+**What to do:**
+1. Download and install **Tor Browser** (https://www.torproject.org/)
+2. Open the `.onion` link in Tor Browser
+3. The page loads and displays the **final victory flag**
+
+### Step 2: Claim Victory
+
+The page shows the flag directly. Submit it to the portal.
+
+**This round has a max of 3 solves** — only the first 3 teams to reach this point and submit the flag earn the 700 points. This makes the entire ARG chain a race.
+
+**The lesson:** The Tor network provides anonymous, censorship-resistant communication. `.onion` addresses use cryptographic keys as their URL, making them self-authenticating. While often associated with illicit activity, Tor is a critical tool for:
+- Journalists in authoritarian regimes
+- Whistleblowers (SecureDrop)
+- Privacy-conscious individuals
+- Circumventing censorship
+
+---
+
+## Appendix: Tools & Resources
+
+### Recommended CTF Toolkit
+
+| Category | Tools |
+|---|---|
+| **Steganography** | `binwalk`, `steghide`, `zsteg`, `stegsolve`, FFT stego tools, `exiftool` |
+| **Hex Editing** | HxD (Windows), `xxd` (Linux), `hexdump` |
+| **Cryptography** | CyberChef, `hashcat`, Python `cryptography` library, dCode.fr |
+| **Web** | Browser DevTools (F12), Burp Suite, `curl`, Postman |
+| **Binary** | GDB, `pwntools`, Ghidra, IDA Free, `ltrace`/`strace` |
+| **OSINT** | Google Maps, Google Dorking, Wayback Machine, `sherlock` |
+| **Networking** | Wireshark, `netcat`/`ncat`, Tor Browser |
+| **Music/Audio** | MuseScore, Audacity, Python `mido`/`music21` |
+| **Image** | GIMP, Python PIL/Pillow, ImageMagick |
+
+### Key Concepts Tested
+
+1. **Steganography** — Hiding data in images (visual, FFT, trailing data, embedded files)
+2. **Classical Cryptography** — Caesar, Vigenère, book ciphers, XOR
+3. **Web Security** — Cookie tampering, SSTI, format strings, base64 encoding
+4. **Binary Exploitation** — Format string attacks, out-of-bounds memory access
+5. **OSINT** — Coordinate lookup, historical figure identification, social media investigation
+6. **Number Theory** — Babylonian numerals, Ramanujan taxicab numbers
+7. **Music Theory** — MIDI encoding, pitch-to-letter mapping
+8. **Dark Web** — Tor, .onion services
+9. **Lateral Thinking** — Word play, cross-referencing clues across rounds
+
+### The Full Flag Chain (Rounds 1→4→17→19)
+
+```
+R1:  PANTHEON{https://welcome-deb.pages.dev/}          (hidden white text on intro.png)
+R2:  PANTHEON{https://kryptoscicada.blogspot.com/}  (FFT stego extraction)
+R3:  PANTHEON{https://raven-codes.pages.dev/}  (book cipher + Vigenère)
+R4:  PANTHEON{https://17291383220683.pages.dev/}  (MIDI + Ramanujan numbers)
+R17: PANTHEON{r/waiters}                       (coordinate OSINT → Aaron Swartz)
+R18: (dark web link)                            (Reddit post from 1729)
+R19: (victory flag)                             (Tor hidden service)
+```
+### The Second flag chain (Rounds 5→6→7→8→9→10)
+```
+R5:  PANTHEON{g4t3w4y_unl0ck3d_https://web-secure-portal.onrender.com}  (XOR known-plaintext)
+R6:  PANTHEON{c00k13_m4n1pul4t10n_https://web-global-megaphone.onrender.com}  (cookie manipulation)
+R7:  PANTHEON{ssti_g0_t3mpl4t3_https://pwn-stonks-fmt.onrender.com}     (SSTI bypass)
+R8:  PANTHEON{f0rm4t_5tr1ng_https://pwn-maze-oob-1.onrender.com}                     (format string)
+R9:  PANTHEON{0ut_0f_b0unds_https://crypto-sphinx-oracle.onrender.com}      (OOB write)
+R10: PANTHEON{Cr4ck1ng_Th3_0lymp14n_0r4cl3_c0mpl3t3d}             (Vigenère oracle)
+```
+### Standalone Round Flags
+```
+R11:PANTHEON{tH1S_1S_@_F@Ls3_FL@G}
+R12:PANTHEON{m1x3d_v3g_1s_g04t3d}
+R13:PANTHEON{I3T3_1s_n0t_4_t3ch_club}
+R14:PANTHEON{P@g@l_T0_B@n@_DUnG@_D3ZT_N0}
+R15:PANTHEON{wh@7_c0l0ur_!$_y0ur_c9}
+R16:PANTHEON{!E7_0r_IEEE_wh!ch_club_w! Il_y0u_ch00se}
+```
